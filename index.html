@@ -2,9 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>KAM Email Assistant</title>
-<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>KAM Email Assistant Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: app shell. The left rail follows the KAM's day in order (1 Morning → 5 End of day), manager views sit below it; the main pane holds one view at a time. Yellow = flagged (quotation/incident/complaint), the product's own signal. */
 :root{
@@ -13,7 +17,7 @@
   --hl:#fff1b0; --hl-ink:#6a5000; --hl-line:#e3c040;
   --crit:#b42318; --crit-soft:#fbe6e3; --warn:#a85508; --warn-soft:#fbeedd; --good:#2b7a4b; --good-soft:#e0f1e6; --info:#3b5f8f; --info-soft:#e3ebf6;
   --shadow:0 1px 2px rgba(20,35,30,.06),0 4px 16px rgba(20,35,30,.06);
-  --f-ui:system-ui,"PingFang SC","Noto Sans SC",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --f-ui:"Inter","Noto Sans SC",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --r:10px;
 }
@@ -250,6 +254,8 @@ td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:ta
 .syncerr{font-size:12.5px;color:var(--crit);background:var(--crit-soft);padding:6px 8px;border-radius:6px}
 .syncwarn{font-size:12.5px;color:var(--warn);background:var(--warn-soft);padding:6px 8px;border-radius:6px}
 .demo-jump{align-self:flex-start;border-top:1px dashed var(--line);border-radius:0;padding-top:8px;width:100%;justify-content:flex-start}
+/* tagfix */ .tag.opp{padding:1px 7px;display:inline-block;gap:0;border-radius:999px}
+.rk .why{align-items:center}
 /* compliance footer */
 .trust{border-top:1px solid var(--line);background:var(--surface);padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted)}
 .trust b{color:var(--ink);font-weight:600}
@@ -292,39 +298,29 @@ td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:ta
   .toast{animation:pop .2s ease-out}
   @keyframes pop{from{transform:translate(-50%,8px);opacity:0}}
 }
-
-.banner{background:var(--crit-soft);color:var(--crit);font-size:13px;font-weight:500;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line)}
-.warnchip{background:var(--warn-soft);color:var(--warn)}
-.runchip{background:var(--accent-soft);color:var(--accent);font-weight:600}
-select.assign{font:inherit;font-size:12px;padding:2px 6px;border:1px dashed var(--hl-line);border-radius:6px;background:var(--surface);color:var(--ink);max-width:100%}
-.briefform{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end}
-.briefform label,.report-day{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);font-weight:600}
-.briefform select,.briefform input,.report-day select{font:inherit;font-size:14px;font-weight:400;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
-.report-day{max-width:260px;margin-top:6px}
-.briefform .actions{grid-column:1/-1}
-.phwarn{color:var(--hl-ink);background:var(--hl);padding:0 4px;border-radius:3px}
-.seg-l{background:var(--muted)}
-.tbl-wrap th[scope],.tbl-wrap tbody th{width:240px;color:var(--muted);font-weight:600;font-size:12.5px;white-space:normal}
-@media (max-width:560px){.briefform{grid-template-columns:minmax(0,1fr)}}
 </style>
-</head>
-<body>
+
 <header class="topbar" id="topbar">
   <div class="brand"><div class="brand-mark" aria-hidden="true">K</div>KAM Email Assistant</div>
-  <div class="top-meta" id="topMeta"></div>
+  <div class="top-meta">
+    <span class="chip">Demo · sample data</span>
+    <span class="chip">Gmail · anna.weber.kam@gmail.com</span>
+    <span class="chip mono" id="clock">Thu 19 Nov 08:12</span>
+    <span class="chip" id="sync">Gmail sync every 30 min</span>
+  </div>
   <div class="top-actions">
     <button type="button" class="btn" data-act="syncOpen" id="syncBtn" aria-expanded="false" aria-controls="syncpop">Set next sync</button>
+    <button type="button" class="btn ghost" data-act="reset">Reset demo</button>
   </div>
 </header>
-<div class="banner" id="banner" hidden></div>
 
 <div class="shell">
   <nav class="rail" id="rail" aria-label="Pages"></nav>
-  <main id="main"><div class="view"><p class="lede">Loading…</p></div></main>
+  <main id="main"></main>
 </div>
 
 <footer class="trust">
-  <span>Runs on this Mac</span><span>Reads Gmail, files into labels, marks flagged emails read</span><span>Writes drafts only, <b>never sends or deletes</b></span><span>Email bodies <b>not stored</b></span><span>Local model via <b>Ollama</b></span>
+  <span>Work mailbox: reads, files into labels, marks flagged emails read</span><span>Drafts only, <b>never sends or deletes</b></span><span>Email bodies <b>not stored</b></span><span>Model <b>self-hosted</b></span><span>Data stored in the <b>EU</b></span><span>Dashboard and report <b>never rank individual KAMs</b></span>
 </footer>
 
 <aside class="drawer" id="drawer" hidden>
@@ -335,130 +331,214 @@ select.assign{font:inherit;font-size:12px;padding:2px 6px;border:1px dashed var(
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
-const TOKEN = '__KAM_TOKEN__';
+/* ---------- data (all example data) ---------- */
+const CUST = {
+  c1:{name:'Klinikum Nordhafen · Central Pharmacy',short:'Klinikum Nordhafen',place:'Hamburg · DE',tier:'A',contacts:['Dr. Petra Kühn (Head of Pharmacy)','Jan Ohlsen (Purchasing)']},
+  c2:{name:'Baltic MedSupply UAB',short:'Baltic MedSupply',place:'Vilnius · LT',tier:'A',contacts:['Tomas Vaitkus (Purchasing Manager)','Laura Jankauskienė (Finance)']},
+  c3:{name:'Rīgas Onkoloģijas centrs',short:'Riga Oncology Centre',place:'Rīga · LV',tier:'A',contacts:['Ilze Bērziņa (Head of Pharmacy)']},
+  c4:{name:'Uniklinik Südtal · Pharmacy',short:'Uniklinik Südtal',place:'Freiburg · DE',tier:'A',contacts:['Markus Feld (Head of Purchasing)','Dr. Sabine Roth (Chief Pharmacist)']},
+  c5:{name:'Tallinn Pharma Distribution OÜ',short:'Tallinn Pharma',place:'Tallinn · EE',tier:'B',contacts:['Kadri Tamm (Purchasing)']},
+  c6:{name:'MediPartner Wien GmbH',short:'MediPartner Wien',place:'Vienna · AT',tier:'B',contacts:['Julia Hofer (Order Management)']},
+  c7:{name:'EuroHua Pharma Trading B.V.',short:'EuroHua Pharma',place:'Rotterdam · NL',tier:'B',contacts:['Chen Li (Managing Director)']},
+  c8:{name:'Nordic Clinical Supply AB',short:'Nordic Clinical',place:'Malmö · SE',tier:'C',contacts:['Erik Lund (Finance)']},
+  c9:{name:'Kauno ligoninės vaistinė',short:'Kaunas Hospital Pharmacy',place:'Kaunas · LT',tier:'C',contacts:['Rūta Petrauskienė (Pharmacist)']},
+  c10:{name:'Praxisklinik Elbufer',short:'Praxisklinik Elbufer',place:'Hamburg · DE',tier:'B',contacts:['Dr. Jonas Brandt (Medical Director)']}
+};
 const C_INC='Incident', C_CMP='Complaint', C_QUO='Quotation request', C_ORD='Order', C_GEN='General enquiry', C_LOG='Logistics & payment', C_OPP='Opportunity signal', C_INT='Internal / no action';
 const CAT_CLS = {[C_INC]:'crit',[C_CMP]:'warn',[C_QUO]:'hl',[C_ORD]:'neutral',[C_GEN]:'neutral',[C_LOG]:'neutral',[C_OPP]:'good',[C_INT]:'mute'};
 const IMP_ORDER = {[C_INC]:0,[C_CMP]:1,[C_QUO]:2};
-const ST_P='To confirm', ST_A='In progress', ST_W='Waiting for customer', ST_C='Closed';
-const STAGES = ['New','Following up','Quoted','Won','Lost'];
-const TONE_TXT = {up:'↑ Improving',down:'↓ Worsening',flat:'→ Stable'};
-const IT_INC='Open incident', IT_CMP='Open complaint', IT_QUO='Quotation pending', IT_REP='Email awaiting reply';
 const AI_MARK = 'AI-generated draft – check before sending';
+const SIGN_EN = 'Best regards,\nAnna Weber';
+const SIGN_DE = 'Mit freundlichen Grüßen\nAnna Weber';
 
-let ST = null;
-const UI = {view:'queue', editing:null, rejecting:null, expanded:{}, drawer:null, syncOpen:false, orig:{}, busy:null, briefCid:'', briefTopic:'', reportDay:null};
+const EMAILS = [
+ {id:'e1',at:461,cust:'c2',lang:'EN',from:'Tomas Vaitkus <t.vaitkus@balticmedsupply.lt>',cat:C_INC,tags:['Risk signal','Order change'],conf:.94,
+  subj:'Urgent: reduce PO 4471 – Bortezomib 3.5 mg',
+  body:'Dear Anna,\nwe lost the Vilnius University Hospital tender and must reduce PO 4471 from 400 to 150 vials. Delivery should move to January. I also have to tell you that another supplier has offered us a price 8% lower.\nPlease confirm the change by Friday.\nTomas',
+  fields:[['Request','Reduce PO 4471 and postpone delivery'],['Product','Bortezomib 3.5 mg'],['Quantity','400 → 150 vials'],['Delivery','Postponed to January 2027 (no exact date given)',1],['Price','Mentions a competitor offer 8% lower'],['Urgency','High · pressing'],['To-do','Confirm the change by Friday; respond on price']],
+  draft:'Dear Tomas,\n\nthank you for letting us know about the change to PO 4471. As I understand it, you need to reduce Bortezomib 3.5 mg from 400 to 150 vials and move delivery to January 2027.\n\nI am checking with our supply team what is possible for the reduced volume and the new delivery window, and I will confirm by [KAM to fill in: time].\n\nOn pricing, I would prefer to talk with you directly. Could we have a short call [KAM to fill in: time]?\n\n'+SIGN_EN},
+ {id:'e2',at:418,cust:'c1',lang:'DE',from:'Dr. Petra Kühn <p.kuehn@klinikum-nordhafen.de>',cat:C_CMP,tags:['Risk signal','Same thread: notice on 18 Nov'],conf:.97,
+  subj:'Reklamation: Kühlkettenabweichung Lieferung 17.11. (Trastuzumab-Biosimilar)',
+  body:'Sehr geehrte Frau Weber,\nwie gestern angekündigt: Der Datenlogger der Lieferung vom 17.11. zeigt 9,2 °C über 40 Minuten. Wir haben 12 Durchstechflaschen in Quarantäne genommen. Das ist bereits die zweite Abweichung in diesem Quartal.\nWir erwarten eine Stellungnahme und einen Termin für die Ersatzlieferung.\nP. Kühn',
+  fields:[['Request','Cold-chain complaint: wants a statement and a replacement delivery'],['Product','Trastuzumab biosimilar'],['Quantity','12 vials in quarantine'],['Delivery','Replacement date: none proposed',1],['Price','—'],['Urgency','High · dissatisfied (2nd time this quarter)'],['To-do','First reply today; pass to QA; give a replacement date']],
+  draft:'Sehr geehrte Frau Dr. Kühn,\n\nvielen Dank für Ihre ausführliche Meldung zur Lieferung vom 17.11. Es tut mir leid, dass es bei den Trastuzumab-Biosimilar-Durchstechflaschen zu einer Temperaturabweichung gekommen ist.\n\nIch habe den Fall heute Morgen an unsere Qualitätssicherung übergeben. Bitte lassen Sie die 12 Durchstechflaschen weiter in Quarantäne. Ich melde mich bis [KAM to fill in: time] mit dem Stand der Prüfung und einem Termin für die Ersatzlieferung.\n\n'+SIGN_DE},
+ {id:'e3',at:-46,cust:'c3',lang:'EN',from:'Ilze Bērziņa <ilze.berzina@onkocentrs.lv>',cat:C_QUO,tags:['Opportunity signal'],conf:.91,
+  subj:'Quotation request – new paclitaxel protocol from January',
+  body:'Dear Ms Weber,\nfrom January we start a new protocol and expect around 1,200 vials of Paclitaxel 300 mg/50 ml per quarter, plus carboplatin. First delivery from 15 January.\nCould you send us a quotation?\nKind regards, Ilze Bērziņa',
+  fields:[['Request','Quotation for a new protocol'],['Product','Paclitaxel 300 mg/50 ml; Carboplatin'],['Quantity','Paclitaxel ~1,200 vials per quarter; carboplatin not stated',1],['Delivery','From 15 Jan 2027'],['Price','—'],['Urgency','Medium · calm'],['To-do','Confirm carboplatin volume; commit to a quotation date']],
+  draft:'Dear Ms Bērziņa,\n\nthank you for your request. As we understand it, you need:\n– Paclitaxel 300 mg/50 ml: about 1,200 vials per quarter\n– Carboplatin: quantity to be confirmed\n– first delivery from 15 January 2027\n\nWe will send you our quotation by [KAM to fill in: quotation date]. Could you let us know the expected carboplatin volume, so we can include it?\n\n'+SIGN_EN},
+ {id:'e4',at:-90,cust:'c5',lang:'EN',from:'Kadri Tamm <kadri.tamm@tallinnpharma.ee>',cat:C_QUO,tags:['Delivery date confirmation'],conf:.95,
+  subj:'PO 2219 delivery date + Q1 prices',
+  body:'Hi Anna,\ncan you confirm the delivery date for PO 2219 (Carboplatin 450 mg/45 ml)? And please send the updated price list for Q1.\nThanks, Kadri',
+  fields:[['Request','Confirm delivery date; updated Q1 prices'],['Product','Carboplatin 450 mg/45 ml'],['Quantity','As per PO 2219'],['Delivery','To be confirmed by us'],['Price','Asks for Q1 prices'],['Urgency','Medium · calm'],['To-do','Confirm delivery date; send Q1 quotation']],
+  draft:'Dear Kadri,\n\nthank you for your message. I am confirming the delivery date for PO 2219 (Carboplatin 450 mg/45 ml) with our logistics team and will come back to you by [KAM to fill in: time]. The updated Q1 prices will follow by [KAM to fill in: quotation date].\n\n'+SIGN_EN},
+ {id:'e5',at:-175,cust:'c7',lang:'ZH',from:'陈立 Chen Li <chen.li@euhua-pharma.nl>',cat:C_OPP,tags:[],conf:.9,
+  subj:'关于生物类似药供应的咨询',
+  body:'Anna您好：\n我们最近在荷兰新拿到两家医院的配送资格，想了解贵司是否也供应生物类似药（曲妥珠单抗、贝伐珠单抗）。能否发一份产品清单和样品申请流程？\n陈立',
+  fields:[['Request','Asks for a biosimilar product list and the sample process'],['Product','Trastuzumab and bevacizumab biosimilars'],['Quantity','—'],['Delivery','—'],['Price','—'],['Urgency','Low · positive'],['To-do','Send product list and sample process; arrange a call']],
+  draft:'陈经理您好：\n\n感谢来信，也祝贺贵司拿到两家新医院的配送资格。产品清单和样品申请流程我会在【待KAM填写：时间】前发给您。关于贝伐珠单抗生物类似药，【待KAM填写：是否供应】。\n\n方便的话，我们约个时间电话，具体了解两家医院的需求。\n\n此致\nAnna Weber'},
+ {id:'e6',at:-252,cust:'c6',lang:'DE',from:'Julia Hofer <j.hofer@medipartner.at>',cat:C_ORD,tags:[],conf:.97,
+  subj:'Bestellung 200 × Carboplatin 450 mg/45 ml, KW 49',
+  body:'Guten Abend Frau Weber,\nhiermit bestellen wir 200 × Carboplatin 450 mg/45 ml, gewünschter Liefertermin KW 49.\nBeste Grüße, Julia Hofer',
+  fields:[['Request','New order'],['Product','Carboplatin 450 mg/45 ml'],['Quantity','200 vials'],['Delivery','Week 49'],['Price','Contract price'],['Urgency','Low · calm'],['To-do','Check stock and send order confirmation']],
+  draft:'Sehr geehrte Frau Hofer,\n\nvielen Dank für Ihre Bestellung über 200 × Carboplatin 450 mg/45 ml. Wir prüfen die Verfügbarkeit für KW 49 und senden Ihnen die Auftragsbestätigung bis [KAM to fill in: time].\n\n'+SIGN_DE},
+ {id:'e7',at:-340,cust:'c4',lang:'DE',from:'Markus Feld <m.feld@uniklinik-suedtal.de>',cat:C_GEN,tags:['Opportunity signal','Meeting today 14:00'],conf:.93,
+  subj:'Unser Gespräch morgen',
+  body:'Hallo Frau Weber,\nbitte bringen Sie zu unserem Gespräch morgen die Stabilitätsdaten nach Anbruch für Bortezomib mit. Außerdem überlegen wir, die Belieferung unserer neuen Tagesklinik ab Q2 auszuschreiben.\nViele Grüße, M. Feld',
+  fields:[['Request','Bring in-use stability data for bortezomib to the meeting'],['Product','Bortezomib'],['Quantity','—'],['Delivery','Meeting today'],['Price','—'],['Urgency','Medium · calm'],['To-do','Prepare the data; ask about the day-clinic tender']],
+  draft:'Sehr geehrter Herr Feld,\n\nvielen Dank für Ihre Nachricht. Die Stabilitätsdaten nach Anbruch für Bortezomib bringe ich zu unserem Gespräch heute um 14:00 Uhr mit. Gerne sprechen wir dabei auch über die geplante Belieferung der neuen Tagesklinik ab Q2.\n\n'+SIGN_DE},
+ {id:'e8',at:-368,cust:'c8',lang:'EN',from:'Erik Lund <erik.lund@nordicclinical.se>',cat:C_LOG,tags:[],conf:.98,
+  subj:'Invoice 2026-1183 – payment scheduled',
+  body:'Hello,\ninvoice 2026-1183 is approved, payment is scheduled for 28 November.\nRegards, Erik Lund',
+  fields:[['Request','Payment notice'],['Product','—'],['Quantity','—'],['Delivery','Payment on 28 Nov'],['Price','—'],['Urgency','Low'],['To-do','No reply needed; recorded']],draft:null},
+ {id:'e9',at:-380,cust:null,lang:'DE',from:'Vertrieb intern <vertrieb@intern.example>',cat:C_INT,tags:[],conf:.99,
+  subj:'Agenda Q4-Vertriebsmeeting',body:'Interne Mitteilung: Agenda für das Q4-Vertriebsmeeting im Anhang.',fields:[['Request','Internal notice'],['To-do','No action needed']],draft:null},
+ {id:'e10',at:475,cust:'c9',lang:'EN',from:'Rūta P. <pharmacy@ligonine-kaunas.lt>',cat:C_GEN,tags:['Domain not in customer list'],conf:.78,
+  subj:'SmPC and storage conditions – Etoposide',
+  body:'Good morning,\ncould you send the latest SmPC and the storage conditions for your Etoposide 20 mg/ml?\nKind regards, Rūta Petrauskienė, Pharmacy Kaunas',
+  fields:[['Customer','Kauno ligoninės vaistinė (guessed from signature, C tier)',1],['Request','SmPC and storage conditions'],['Product','Etoposide 20 mg/ml'],['Urgency','Low · calm'],['To-do','Send the SmPC']],
+  draft:'Dear Ms Petrauskienė,\n\nthank you for your request. Please find the current SmPC for Etoposide 20 mg/ml attached [KAM to fill in: attachment]. The storage conditions are described in section 6.4.\n\n'+SIGN_EN}
+];
+const E11 = {id:'e11',at:0,cust:'c10',lang:'DE',from:'Dr. Jonas Brandt <j.brandt@praxisklinik-elbufer.de>',cat:C_INC,tags:['Risk signal'],conf:.96,
+  subj:'Dringend: Paclitaxel-Lieferung heute nicht eingetroffen',
+  body:'Frau Weber,\ndie für heute zugesagte Lieferung (Lieferschein 88231) ist nicht angekommen. Drei Patiententermine um 11:00 Uhr hängen davon ab. Bitte rufen Sie mich umgehend an.\nDr. J. Brandt',
+  fields:[['Request','Today\'s delivery has not arrived; 11:00 treatments affected'],['Product','Paclitaxel (delivery note 88231)'],['Quantity','As per delivery note',1],['Delivery','Before 11:00 today'],['Price','—'],['Urgency','Very high · dissatisfied'],['To-do','Call immediately; check logistics; give a redelivery time']],
+  draft:'Sehr geehrter Herr Dr. Brandt,\n\nvielen Dank für Ihre sofortige Nachricht. Es tut mir sehr leid, dass die Lieferung 88231 heute nicht angekommen ist. Ich kläre den Status gerade mit unserer Logistik und rufe Sie bis [KAM to fill in: time] an.\n\n'+SIGN_DE};
+
+const ST_P='To confirm', ST_A='In progress', ST_W='Waiting for customer', ST_C='Closed';
+const HIST = [
+  {cat:C_CMP,cust:'c4',state:ST_C},{cat:C_INC,cust:'c6',state:ST_C},{cat:C_QUO,cust:'c5',state:ST_W},
+  {cat:C_QUO,cust:'c3',state:ST_C},{cat:C_QUO,cust:'c8',state:ST_W},{cat:C_CMP,cust:'c1',state:ST_C}];
+const STATIC_SIG = {
+  c1:{risk:['Repeated complaints (2nd this quarter)','Tone getting harsher'],opp:[]},
+  c2:{risk:['Mentions competitor, pushes on price','Order reduced and postponed'],opp:[]},
+  c3:{risk:[],opp:['New protocol: ~1,200 vials per quarter']},
+  c4:{risk:[],opp:['New day clinic, Q2 tender'],meet:'Meeting today 14:00'},
+  c5:{risk:[],opp:[]},c6:{risk:[],opp:[]},c7:{risk:[],opp:['Won supply rights for 2 new hospitals']},c8:{risk:[],opp:[]},c9:{risk:[],opp:[]},
+  c10:{risk:[],opp:[],overdue:'Email from 17 Nov unanswered for 2 working days'}
+};
+const OPPS = [
+  {id:'o1',cust:'c3',src:'e3 · yesterday 23:14',sum:'New paclitaxel protocol: about 1,200 vials of paclitaxel per quarter from January 2027, plus carboplatin.',next:'Confirm the carboplatin volume and send the quotation at the promised time.',title:'2027 paclitaxel protocol'},
+  {id:'o2',cust:'c7',src:'e5 · yesterday 21:05',sum:'Won supply rights for two new hospitals in the Netherlands; asks about trastuzumab and bevacizumab biosimilars.',next:'Send the product list and sample process; arrange a call about the two hospitals\' needs.',title:'Biosimilars · 2 new hospitals'},
+  {id:'o3',cust:'c4',src:'e7 · yesterday 18:20',sum:'Plans to tender supply for its new day clinic from Q2.',next:'Ask about tender timing, scope and award criteria in today\'s 14:00 meeting.',title:'New day clinic supply tender'}
+];
+const STAGES = ['New','Following up','Quoted','Won','Lost'];
+const PIPE = [
+  {id:'p1',cust:'c5',title:'Q1 carboplatin framework quote',stage:'Quoted'},{id:'p2',cust:'c6',title:'Cytotoxics range extension',stage:'Following up'},
+  {id:'p3',cust:'c1',title:'2027 biosimilar tender',stage:'Following up'},{id:'p4',cust:'c9',title:'Q4 etoposide restock',stage:'Won'},{id:'p5',cust:'c8',title:'Q4 gemcitabine supply',stage:'Lost'}];
+const TONE = {c1:[5,'down'],c2:[3,'down'],c3:[6,'up'],c4:[4,'flat'],c5:[5,'flat'],c6:[3,'flat'],c7:[2,'up'],c8:[3,'flat'],c9:[2,'flat'],c10:[2,'flat']};
+const TONE_TXT = {up:'↑ Improving',down:'↓ Worsening',flat:'→ Stable'};
+const CARDS = {
+  c1:{sum:'A tier · buys trastuzumab biosimilar and cytotoxics. Announced a cold-chain deviation on 18 Nov; formal complaint at 06:58 today, the 2nd this quarter.',
+      next:[['Call Dr. Kühn this morning: QA status and replacement timing','A complaint needs a first reply today; as the 2nd this quarter, a call steadies the relationship better than an email'],['Find the common cause of both deviations with QA and logistics','The customer will ask how it will be prevented, not only for a replacement'],['Do not discuss compensation by email; give facts and timing first','Compensation needs approval; the draft leaves it out']],
+      talk:['Confirm the 12 vials are in quarantine and thank them','Give the expected time for the QA result','State the replacement date (only after logistics confirms)','Announce that corrective actions will follow']},
+  c2:{sum:'A tier · buys bortezomib and carboplatin. At 07:41 today asked to cut PO 4471 from 400 to 150 vials and move it to January, and mentioned a competitor price 8% lower.',
+      next:[['Call Tomas this morning to understand what the lost tender means for future demand','The cut comes from a downstream tender; find out whether it is one-off or lasting'],['Check with supply whether 150 vials in January works; confirm in writing by Friday','The customer asked for confirmation by Friday'],['Discuss price in person with the historical price range at hand; no discount by email','A discount by email becomes the starting point of the next negotiation']],
+      talk:['Acknowledge the impact of the lost tender; ask about upcoming tenders','Confirm new quantity and delivery date','Ask about the terms of the competitor offer (volume, delivery, pack size)','Agree on written confirmation by Friday']},
+  c3:{sum:'A tier · at 23:14 yesterday requested a quotation for a new protocol: about 1,200 vials of paclitaxel per quarter from January 2027, plus carboplatin.',
+      next:[['Confirm the expected carboplatin volume by email','The quotation needs the full volume'],['Send the quotation at the promised time','Timing of the quote is the first impression'],['Add the new protocol to the pipeline','Already identified as an opportunity']],talk:['Confirm the first delivery date, 15 January','Confirm carboplatin strength and volume','Ask how long the protocol is expected to run']},
+  c4:{sum:'A tier · quarterly meeting today at 14:00. The damaged-packaging complaint of 3 Nov was closed on 6 Nov; tone has been calm since. Plans a Q2 supply tender for its new day clinic.',
+      next:[['Read the pre-meeting brief and bring the bortezomib in-use stability data','The customer asked for it by email'],['Ask about the day-clinic tender timing and award criteria','A new opportunity; the earlier we engage the better'],['Send minutes and next steps after the meeting','Keeps us proactive']],talk:['Review how the 3 Nov issue was handled and improved','Stability data','Day-clinic product range and expected volumes']}
+};
+
+/* ---------- state ---------- */
+let S;
+const clone = o => JSON.parse(JSON.stringify(o));
+function init(){
+  S = {min:8*60+12, lastSyncT:8*60, nextSync:1440+480, manualNext:false, syncOpen:false, syncErr:null, emails:clone(EMAILS).map(e=>({...e,status:'pending',confirmed:[],sent:false})), injected:false,
+       log:[], called:{}, manual:{}, opps:clone(OPPS).map(o=>({...o,decision:null})), pipe:clone(PIPE), editing:null, rejecting:null, tomorrow:false, view:null};
+}
+init();
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const plural = (n,w) => `${n} ${w}${n===1?'':'s'}`;
-const uniq = a => [...new Set(a)];
-const pad = n => String(n).padStart(2,'0');
-const dkey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-const hm = iso => { const d=new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-function dayLabel(iso){
-  const d=new Date(iso), t=new Date(), y=new Date(); y.setDate(t.getDate()-1);
-  if (dkey(d)===dkey(t)) return 'Today'; if (dkey(d)===dkey(y)) return 'Yesterday';
-  if (d-t > 0 && d-t < 2*864e5) return 'Tomorrow';
-  return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-}
-const whenTxt = iso => iso ? `${dayLabel(iso)} ${hm(iso)}` : '—';
-const custOf = id => ST.customers.find(c=>c.id===id) || null;
-const custName = e => { const c=custOf(e.customer_id); return c ? c.short : (e.category===C_INT ? 'Internal' : e.from_name); };
-const tierBadge = c => c ? `<span class="tier ${c.tier}" title="Tier ${c.tier}">${c.tier}</span>` : '';
-const catChip = c => `<span class="cat ${CAT_CLS[c]||'neutral'}">${esc(c)}</span>`;
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const hm = m => { m = ((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
+const when = e => (e.at < 0 ? 'Yesterday ' + hm(e.at) : (e.id==='e11' ? 'Just now ' : 'Today ') + hm(e.at));
+const cust = id => CUST[id] || {short:'Internal',name:'Internal',tier:'',place:''};
+const tierBadge = id => CUST[id] ? `<span class="tier ${CUST[id].tier}" title="Tier ${CUST[id].tier}">${CUST[id].tier}</span>` : '';
+const catChip = c => `<span class="cat ${CAT_CLS[c]}">${c}</span>`;
 const shortCat = c => c===C_QUO ? 'Quotation' : c;
-const isImp = e => e.category in IMP_ORDER;
-const isOpen = e => e.status==='pending';
+const isImp = e => e.cat in IMP_ORDER;
+const isOpen = e => e.status==='pending' || e.status==='snoozed';
 const lowIdx = e => e.fields.map((f,i)=>f[2]?i:-1).filter(i=>i>=0);
 const needsConfirm = e => lowIdx(e).some(i=>!e.confirmed.includes(i));
-const draftOf = e => e.draft_edited || e.draft;
-const hasPh = t => /\[KAM to fill in[^\]]*\]|【[^】]*】/.test(t||'');
+const draftOf = e => e.draftEdited ?? e.draft;
+const hasPh = t => /\[KAM to fill in[^\]]*\]|【[^】]*】/.test(t);
 const phHTML = t => esc(t).replace(/(\[KAM to fill in[^\]]*\]|【[^】]*】)/g,'<mark class="ph">$1</mark>');
-const daysAgo = n => Date.now() - n*864e5;
-function impState(e){ if (isOpen(e)) return ST_P; if (e.sent) return ST_W; if (e.status==='noaction') return ST_C; return ST_A; }
+const plural = (n,w) => `${n} ${w}${n===1?'':'s'}`;
+function tick(n=2){ S.min += n; while (S.min >= S.nextSync) runSync(S.nextSync); }
+const syncL = t => (t >= 1440 ? 'tomorrow ' : '') + hm(t);
+function runSync(t){
+  S.lastSyncT = t; S.nextSync = t < 480 ? 480 : 1440+480; S.manualNext = false;
+  if (!S.injected){
+    S.injected = true; const n = clone(E11); n.at = t; S.emails.push({...n,status:'pending',confirmed:[],sent:false});
+    log(`Sync ${hm(t)}: 1 new email · Praxisklinik Elbufer · Incident`);
+    toast('Sync found 1 new email: Incident – flagged, marked read, filed in KAM/Incident and pushed to your phone');
+  } else log(`Sync ${hm(t)}: no new emails`);
+}
+const LABEL = c => 'KAM/' + (c===C_INT ? 'Internal' : c);
+const readInGmail = e => isImp(e);
+const gmailLine = e => `<div class="gm">Gmail: ${readInGmail(e)?'<b>marked read</b>':'<b>left unread</b>'} · filed in <span class="lbl">${esc(LABEL(e.cat))}</span></div>`;
+function log(text){ S.log.push({t:hm(S.min),text}); }
+function impState(e){ if (isOpen(e)) return ST_P; if (e.sent) return ST_W; return ST_A; }
 function deadline(e){
-  const p = new Date(e.processed);
-  if (e.category===C_INC) return {at:new Date(+p+2*36e5), txt:'escalate if unhandled after 2 hours'};
-  if (e.category===C_CMP){ const d=new Date(p); d.setHours(17,30,0,0); return {at: d>p?d:new Date(+p+2*36e5), txt:'first reply due today by 17:30'}; }
-  if (e.category===C_QUO){ const s=new Date(p); s.setHours(8,0,0,0); return {at:new Date(Math.max(+p,+s)+36e5), txt:'reminder within 1 working hour'}; }
+  if (e.cat===C_INC) return {at:e.at+120, txt:'sales manager notified if unhandled after 2 hours'};
+  if (e.cat===C_CMP) return {at:17*60+30, txt:'first reply due today by 17:30'};
+  if (e.cat===C_QUO) return {at:Math.max(e.at,8*60)+60, txt:'reminder within 1 working hour'};
   return null;
 }
 function dueTag(e){
   const d = deadline(e); if(!d) return '';
-  const left = Math.round((d.at - Date.now())/6e4);
+  const left = d.at - S.min;
   const cls = left<0 ? 'late' : left<=60 ? 'soon' : '';
-  const h=Math.floor(Math.abs(left)/60), m=Math.abs(left)%60;
-  const span = `${h?h+' h ':''}${m} min`;
-  return `<span class="due mono ${cls}">${left<0?`Overdue by ${span}`:`By ${hm(d.at)} (${span} left)`}</span>`;
+  const h = Math.floor(left/60), m = left%60;
+  const label = left<0 ? `Overdue by ${-left} min` : `By ${hm(d.at)} (${h?h+' h ':''}${m} min left)`;
+  return `<span class="due mono ${cls}">${label}</span>`;
 }
-function toast(msg){ if(!msg) return; const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>{t.hidden=true},4200); }
-
-/* ---------- server ---------- */
-async function api(path, body){
-  const r = await fetch(path, {method: body?'POST':'GET', headers:{'X-KAM-Token':TOKEN,'Content-Type':'application/json'}, body: body?JSON.stringify(body):undefined});
-  let j = {}; try { j = await r.json(); } catch(_) {}
-  if (j.state) ST = j.state;
-  if (!r.ok || j.ok===false) throw new Error(j.error || `Request failed (${r.status})`);
-  return j;
-}
-async function act(body){
-  UI.busy = body.act + (body.cid||body.id||'');
-  render();
-  try { const j = await api('/api/action', body); toast(j.message); return true; }
-  catch(e){ toast(e.message); return false; }
-  finally { UI.busy=null; render(); }
-}
-function typing(){ const a=document.activeElement; return UI.editing || UI.syncOpen || (a && ['INPUT','TEXTAREA','SELECT'].includes(a.tagName)); }
-async function poll(){
-  try { await api('/api/state'); $('#banner').hidden = true; if (typing()) renderTop(); else render(); }
-  catch(e){ const b=$('#banner'); b.textContent = /reload/i.test(e.message) ? 'The app was restarted. Reload this page.' : 'Cannot reach the app. Is it still running in the Terminal window?'; b.hidden=false; }
-  setTimeout(poll, ST && ST.sync.running ? 3000 : 30000);
+const RULES = {
+  [C_INC]:'Immediate push · hourly reminders until confirmed handled',
+  [C_CMP]:'Immediate push · first reply due today, then reminders at the promised update times',
+  [C_QUO]:'Reminder within 1 hour · reminder before the promised quote time · follow-up if no answer 3 days after the quote'
+};
+function toast(msg){
+  if (msg===undefined) return; toast._last = msg;
+  const t=$('#toast'); t.textContent=msg; t.hidden=false;
+  clearTimeout(toast._t); toast._t=setTimeout(()=>{t.hidden=true},3200);
 }
 
 /* ---------- customer signals & Top 10 ---------- */
-function custEmails(cid, days){ const since=daysAgo(days); return ST.emails.filter(e=>e.customer_id===cid && new Date(e.received)>=since); }
+const IT_INC='Open incident', IT_CMP='Open complaint', IT_QUO='Quotation pending', IT_REP='Email awaiting reply';
 function signals(cid){
-  const es = custEmails(cid, 30), items = new Set();
-  es.forEach(e=>{
-    if (e.category===C_INT || e.category===C_LOG) return;
-    if (isImp(e) && !e.sent && e.status!=='noaction') items.add(e.category===C_INC?IT_INC:e.category===C_CMP?IT_CMP:IT_QUO);
-    else if (isOpen(e) && e.needs_reply) items.add(IT_REP);
+  const st = STATIC_SIG[cid] || {risk:[],opp:[]};
+  const items = [];
+  S.emails.filter(e=>e.cust===cid && ((!e.sent && !['rejected','noaction'].includes(e.status)) || isOpen(e))).forEach(e=>{
+    if (e.cat===C_INT || e.cat===C_LOG) return;
+    if (isImp(e)) items.push(e.cat===C_INC?IT_INC:e.cat===C_CMP?IT_CMP:IT_QUO);
+    else if (isOpen(e)) items.push(IT_REP);
   });
-  const recent = custEmails(cid, 14);
-  const overdue = es.some(e=>isOpen(e) && !isImp(e) && e.needs_reply && Date.now()-new Date(e.received) > 864e5) ? 'Email unanswered for over a day' : null;
-  return {items:[...items], risk:uniq(recent.flatMap(e=>e.risk)).slice(0,3), opp:uniq(recent.flatMap(e=>e.opp)).slice(0,3), overdue};
+  const risk = [...st.risk];
+  if (cid==='c10' && S.injected) risk.push('Today\'s delivery missing');
+  return {risk, opp:[...st.opp], items:[...new Set(items)], overdue:st.overdue, meet:st.meet};
 }
-function score(c){
-  const s = signals(c.id); let v = {A:30,B:18,C:8}[c.tier]||8;
+function score(cid){
+  const s = signals(cid), t = CUST[cid].tier;
+  let v = {A:30,B:18,C:8}[t];
   s.items.forEach(i=>{ v += i===IT_INC?25 : i===IT_CMP?20 : i===IT_QUO?12 : 6; });
-  return v + s.risk.length*8 + s.opp.length*5 + (s.overdue?15:0) + (c.manual||0);
+  v += s.risk.length*8 + s.opp.length*5 + (s.overdue?15:0) + (s.meet?10:0);
+  v += (S.manual[cid]||0);
+  return v;
 }
-function action(c){
-  const card = ST.cards[c.id] && ST.cards[c.id].card;
-  const s = signals(c.id);
-  if (s.items.includes(IT_INC)) return 'Call about the open incident and agree the next update';
-  if (s.items.includes(IT_CMP)) return 'Give the first reply to the complaint today';
-  if (card && card.next_steps && card.next_steps[0]) return card.next_steps[0].step;
-  if (s.overdue) return 'Answer the email that has been waiting over a day';
-  if (s.items.includes(IT_QUO)) return 'Send the quotation at the promised time';
-  if (s.risk.length) return 'Call to check on the relationship';
-  if (s.opp.length) return 'Follow up on the opportunity';
-  if (s.items.includes(IT_REP)) return 'Answer the waiting email';
-  return 'Nothing open; keep routine contact';
+function action(cid){
+  if (cid==='c10') return S.injected ? 'Call Dr. Brandt now and confirm today\'s redelivery time' : 'Answer the question about the December supply plan (overdue)';
+  return {c1:'Call Dr. Kühn this morning: QA status and replacement timing',c2:'Call Tomas this morning: reason for the cut; discuss price in person',
+    c3:'Confirm carboplatin volume; send the quotation at the promised time',c4:'Read the pre-meeting brief before 14:00; bring the stability data',c5:'Confirm the PO 2219 delivery date; send Q1 quotation',
+    c6:'Check stock for week 49; send order confirmation',c7:'Send product list and sample process; arrange a call',c8:'Nothing open; keep routine contact this week',c9:'Answer the SmPC request'}[cid];
 }
-const riskUp = c => c.tier==='A' && signals(c.id).risk.length>0;
-function top10(){ return ST.customers.filter(c=>custEmails(c.id,30).length || c.manual).sort((a,b)=>score(b)-score(a)).slice(0,10); }
-function calledToday(cid){ const t=dkey(new Date()); const c=ST.calls.filter(x=>x.customer_id===cid && dkey(new Date(x.ts))===t).pop(); return c ? hm(c.ts) : null; }
-function tone(cid){
-  const score = e => ({dissatisfied:2,pressing:1}[e.sentiment]||0);
-  const a = custEmails(cid,7), b = custEmails(cid,14).filter(e=>new Date(e.received)<daysAgo(7));
-  if (!a.length || !b.length) return 'flat';
-  const x = a.reduce((s,e)=>s+score(e),0)/a.length, y = b.reduce((s,e)=>s+score(e),0)/b.length;
-  return x < y-0.3 ? 'up' : x > y+0.3 ? 'down' : 'flat';
-}
+const riskUp = cid => CUST[cid].tier==='A' && signals(cid).risk.length>0;
+function top10(){ return Object.keys(CUST).sort((a,b)=>score(b)-score(a)).slice(0,10); }
 
-/* ---------- top bar & rail ---------- */
+/* ---------- views ---------- */
 const VIEWS = [
   {id:'queue',n:'1',when:'Morning',label:'Review queue'},
   {id:'top10',n:'2',when:'Late morning',label:'Top 10 customers'},
@@ -466,414 +546,406 @@ const VIEWS = [
   {id:'pipeline',n:'4',when:'Afternoon',label:'Opportunities & drafts'},
   {id:'evening',n:'5',when:'End of day',label:'Daily summary'},
 ];
-const MORE = [{id:'dashboard',label:'Dashboard',w:'Live'},{id:'report',label:'Daily report',w:'Any past day'},{id:'settings',label:'Settings',w:'Customers, modes'}];
-function nowStep(){ const h=new Date().getHours(); return h<10?'queue':h<12?'top10':h<14?'brief':h<17?'pipeline':'evening'; }
-function syncText(){
-  const s=ST.sync; if (s.running) return `Syncing… ${s.message||''}`;
-  return `Gmail sync · last ${s.last?whenTxt(s.last):'never'} · next ${s.next?whenTxt(s.next):'—'}${s.manual?' (set manually)':` (daily ${ST.daily_sync_time})`}`;
-}
-function renderTop(){
-  const m = ST.modes, chips = [];
-  if (ST.sample) chips.push('<span class="chip warnchip">Sample data · no mailbox</span>');
-  chips.push(`<span class="chip">Gmail · ${esc(ST.mailbox)}</span>`);
-  if (!ST.sample && !m.gmail_changes) chips.push('<span class="chip warnchip" title="gmail_changes is off in config.json">Shadow mode · Gmail unchanged</span>');
-  if (!ST.sample && !m.drafts) chips.push('<span class="chip warnchip" title="generate_drafts is off in config.json">Drafts off</span>');
-  chips.push(`<span class="chip ${ST.sync.running?'runchip':''}" id="sync">${esc(syncText())}</span>`);
-  $('#topMeta').innerHTML = chips.join('');
-  const b=$('#banner');
-  if (ST.sync.error){ b.textContent = 'Last sync failed: ' + ST.sync.error; b.hidden=false; } else if (!b.textContent.startsWith('Cannot')) b.hidden=true;
-  const pop=$('#syncpop'); pop.hidden=!UI.syncOpen; $('#syncBtn').setAttribute('aria-expanded', UI.syncOpen?'true':'false');
-  if (UI.syncOpen && !pop.contains(document.activeElement)) pop.innerHTML = syncPopHTML();
-}
+const MGR = [{id:'dashboard',label:'Real-time dashboard'},{id:'report',label:'Daily performance report'}];
+function nowStep(){ const m=S.min; return m<10*60?'queue':m<12*60?'top10':m<14*60?'brief':m<17*60?'pipeline':'evening'; }
+
 function renderRail(){
-  const pend = ST.emails.filter(isOpen).length, newOpps = ST.opps.filter(o=>!o.decision).length;
-  const badge = {queue:pend, pipeline:newOpps}, ns = nowStep();
-  const item = (v,n,w) => `<button type="button" class="nav" data-go="${v.id}" ${UI.view===v.id?'aria-current="page"':''}>
-      <span class="n">${n}</span><span class="t">${v.label}${ns===v.id?'<span class="now">Now</span>':''}</span>
-      ${badge[v.id]?`<span class="b">${badge[v.id]}</span>`:''}<span class="w">${w}</span></button>`;
-  $('#rail').innerHTML = `<div class="rail-h">Your day</div>` + VIEWS.map(v=>item(v,v.n,v.when)).join('') +
-    `<div class="rail-sep"></div><div class="rail-h">Overview</div>` + MORE.map(v=>item(v,v.id==='dashboard'?'◷':v.id==='report'?'≡':'⚙',v.w)).join('');
-}
-function syncPopHTML(){
-  const s = ST.sync;
-  return `<form id="syncForm" class="syncform">
-    <div><b>Next mailbox sync</b><div class="note">Last ${s.last?whenTxt(s.last):'never'} · next ${s.next?whenTxt(s.next):'—'}</div></div>
-    <p class="note" style="margin:0">Without a manual time, the mailbox syncs only once a day, at ${ST.daily_sync_time} (Central European Time).</p>
-    <div class="row-wrap"><button type="button" class="btn sm primary" data-act="syncQuick" data-m="now">Sync now</button><button type="button" class="btn sm" data-act="syncQuick" data-m="15">In 15 min</button><button type="button" class="btn sm" data-act="syncQuick" data-m="60">In 1 hour</button></div>
-    <label class="synclbl" for="syncTime">Or pick a time today<input type="time" id="syncTime" step="300" value="${s.manual&&s.next?hm(s.next):hm(new Date().toISOString())}"></label>
-    ${!s.manual?`<div class="syncwarn">The next automatic sync is ${s.next?whenTxt(s.next):'tomorrow'}. New emails, including incidents, wait until then unless you set a sync.</div>`:''}
-    <div class="actions"><button type="submit" class="btn primary sm">Save</button><button type="button" class="btn ghost sm" data-act="syncClose">Cancel</button></div>
-    <p class="note" style="margin:0">After this sync, the app goes back to the daily ${ST.daily_sync_time} sync. A first sync of many emails can take a while: each email goes through the local model.</p>
-  </form>`;
+  const pend = S.emails.filter(isOpen).length;
+  const newOpps = S.opps.filter(o=>!o.decision).length;
+  const badge = {queue:pend, pipeline:newOpps};
+  const ns = nowStep();
+  $('#rail').innerHTML =
+    `<div class="rail-h">The KAM's day</div>` +
+    VIEWS.map(v=>`<button type="button" class="nav" data-go="${v.id}" ${S.view===v.id?'aria-current="page"':''}>
+      <span class="n">${v.n}</span><span class="t">${v.label}${ns===v.id?'<span class="now">Now</span>':''}</span>
+      ${badge[v.id]?`<span class="b">${badge[v.id]}</span>`:''}<span class="w">${v.when}</span></button>`).join('') +
+    `<div class="rail-sep"></div><div class="rail-h">Sales manager</div>` +
+    MGR.map(v=>`<button type="button" class="nav" data-go="${v.id}" ${S.view===v.id?'aria-current="page"':''}>
+      <span class="n">${v.id==='dashboard'?'◷':'≡'}</span><span class="t">${v.label}</span><span class="w">${v.id==='dashboard'?'Any time':'Every working day 08:15'}</span></button>`).join('') +
+    `<p class="rail-note">The demo clock moves forward as you act. The mailbox syncs once a day at 08:00 CET unless you set an extra sync with “Set next sync” at the top. That sync brings in a new incident, so you can follow it through every page.</p>`;
 }
 
-/* ---------- 1 review queue ---------- */
-function assignSelect(e){
-  if (e.customer_id || e.category===C_INT || !ST.customers.length) return '';
-  return `<select class="assign" data-act="assign" data-id="${e.id}" aria-label="Assign to customer"><option value="">Assign ${esc(e.from_addr.split('@')[1])} to…</option>${ST.customers.map(c=>`<option value="${c.id}">${esc(c.short)} (${c.tier})</option>`).join('')}</select>`;
-}
-function gmailLine(e){
-  const read = e.marked_read ? '<b>marked read</b>' : isImp(e) ? 'not marked read' : '<b>left unread</b>';
-  const lbl = e.label_applied ? `filed in <span class="lbl">${esc(e.label)}</span>` : `not labelled${ST.sample?'':' (shadow mode)'}`;
-  return `<div class="gm">Gmail: ${read} · ${lbl}</div>`;
-}
-function origBlock(e){
-  const o = UI.orig[e.id];
-  if (!o) return `<button type="button" class="btn ghost sm" data-act="orig" data-id="${e.id}">Show original email</button>`;
-  if (o.loading) return '<div class="note">Loading the email from Gmail…</div>';
-  if (o.error) return `<div class="syncerr">${esc(o.error)}</div>`;
-  return `<div class="orig"><div class="body">${esc(o.text)}</div><div class="from">${esc(e.from_name)} &lt;${esc(e.from_addr)}&gt;${e.attachments.length?' · attachments: '+esc(e.attachments.join(', ')):''}</div>
-    <button type="button" class="btn ghost sm" data-act="origHide" data-id="${e.id}">Hide original</button></div>`;
-}
+/* 1 queue */
 function mailCard(e){
-  const imp = isImp(e), c = custOf(e.customer_id);
+  const imp = isImp(e), c = cust(e.cust);
   const fields = e.fields.map((f,i)=>{
-    if (f[2] && !e.confirmed.includes(i)) return `<dt>${esc(f[0])}</dt><dd><div class="low"><input id="lf-${e.id}-${i}" value="${esc(f[1])}" aria-label="${esc(f[0])}">
+    if (f[2] && !e.confirmed.includes(i)) return `<dt>${f[0]}</dt><dd><div class="low"><input id="lf-${e.id}-${i}" value="${esc(f[1])}" aria-label="${f[0]}">
       <button type="button" class="btn sm" data-act="confirm" data-id="${e.id}" data-i="${i}">Confirm</button><span class="why">Low confidence – please check</span></div></dd>`;
-    return `<dt>${esc(f[0])}</dt><dd>${esc(f[1])}${f[2]?'<span class="ok-mark">✓ Checked</span>':''}</dd>`;
+    return `<dt>${f[0]}</dt><dd>${esc(f[1])}${f[2]?'<span class="ok-mark">✓ Checked</span>':''}</dd>`;
   }).join('');
   let draft;
-  if (!e.draft) draft = `<div class="nodraft">${e.needs_reply ? (ST.modes.drafts?'No draft was written for this email.':'Drafts are off in config.json.') : 'No reply needed.'}</div>`;
-  else if (UI.editing===e.id) draft = `<div class="draft"><div class="draft-tag"><span>${AI_MARK}</span><span>Editing</span></div><textarea id="ta-${e.id}" aria-label="Edit draft">${esc(draftOf(e))}</textarea></div>`;
-  else draft = `<div class="draft"><div class="draft-tag"><span>${AI_MARK}</span><span>${esc(e.lang)} · goes to Gmail drafts as a reply when you adopt it</span></div><pre>${phHTML(draftOf(e))}</pre></div>`;
-  const blocked = needsConfirm(e), busy = UI.busy==='adopt'+e.id || UI.busy==='saveEdit'+e.id;
+  if (!e.draft) draft = `<div class="nodraft">${e.cat===C_INT?'Internal notice, no action needed.':'No reply needed; recorded.'}</div>`;
+  else if (S.editing===e.id) draft = `<div class="draft"><div class="draft-tag"><span>${AI_MARK}</span><span>Editing</span></div><textarea id="ta-${e.id}" aria-label="Edit draft">${esc(draftOf(e))}</textarea></div>`;
+  else draft = `<div class="draft"><div class="draft-tag"><span>${AI_MARK}</span><span>${e.lang} · saved to Gmail drafts as a reply</span></div><pre>${phHTML(draftOf(e))}</pre></div>`;
+  const blocked = needsConfirm(e);
   let acts;
-  if (UI.editing===e.id) acts = `<button type="button" class="btn primary" data-act="saveEdit" data-id="${e.id}" ${busy?'disabled':''}>Save edits and adopt</button><button type="button" class="btn ghost" data-act="cancelEdit">Cancel</button>`;
-  else if (UI.rejecting===e.id) acts = `<div class="reasons"><b>Reason:</b>${['Inaccurate','Wrong tone','No reply needed',"I'll write it myself"].map(r=>`<button type="button" class="btn sm" data-act="rejectWhy" data-id="${e.id}" data-r="${esc(r)}">${esc(r)}</button>`).join('')}<button type="button" class="btn sm ghost" data-act="cancelReject">Cancel</button></div>`;
-  else if (!e.draft) acts = `<button type="button" class="btn primary" data-act="noaction" data-id="${e.id}" ${blocked?'disabled':''}>${e.needs_reply?'I will reply myself':'Confirm'}</button>${blocked?'<span class="note">Check the yellow fields first</span>':''}`;
-  else acts = `<button type="button" class="btn primary" data-act="adopt" data-id="${e.id}" ${blocked||busy?'disabled':''}>${busy?'Saving…':'Adopt draft'}</button>
+  if (S.editing===e.id) acts = `<button type="button" class="btn primary" data-act="saveEdit" data-id="${e.id}">Save edits and adopt</button><button type="button" class="btn ghost" data-act="cancelEdit">Cancel</button>`;
+  else if (S.rejecting===e.id) acts = `<div class="reasons"><b>Reason:</b>${['Inaccurate','Wrong tone','No reply needed','I\'ll write it myself'].map(r=>`<button type="button" class="btn sm" data-act="rejectWhy" data-id="${e.id}" data-r="${esc(r)}">${esc(r)}</button>`).join('')}<button type="button" class="btn sm ghost" data-act="cancelReject">Cancel</button></div>`;
+  else if (!e.draft) acts = `<button type="button" class="btn primary" data-act="noaction" data-id="${e.id}" ${blocked?'disabled':''}>Confirm</button>`;
+  else acts = `<button type="button" class="btn primary" data-act="adopt" data-id="${e.id}" ${blocked?'disabled':''}>Adopt draft</button>
       <button type="button" class="btn" data-act="edit" data-id="${e.id}" ${blocked?'disabled':''}>Edit</button>
       <button type="button" class="btn danger" data-act="reject" data-id="${e.id}">Reject</button>
-      ${blocked?'<span class="note">Check the yellow fields first</span>':''}<span class="spacer"></span>
+      ${blocked?'<span class="note">Check the yellow fields first</span>':''}
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost sm" data-act="forward" data-id="${e.id}">Forward to colleague</button>
+      <button type="button" class="btn ghost sm" data-act="snooze" data-id="${e.id}">Snooze to 10:00</button>
       <button type="button" class="btn ghost sm" data-act="noaction" data-id="${e.id}">No action</button>`;
-  if (!imp && UI.expanded[e.id]) acts += `<button type="button" class="btn ghost sm" data-act="expand" data-id="${e.id}">Show subject only</button>`;
+  if (!imp && S.expanded && S.expanded[e.id]) acts += `<button type="button" class="btn ghost sm" data-act="expand" data-id="${e.id}">Show subject only</button>`;
   return `<article class="mail ${imp?'is-hl':''}" id="m-${e.id}">
-    <header class="mail-h">${imp?'<span class="flag">Flagged</span>':''}${catChip(e.category)}
-      ${e.risk.map(t=>`<span class="tag risk">${esc(t)}</span>`).join('')}${e.opp.map(t=>`<span class="tag opp">${esc(t)}</span>`).join('')}
-      <span class="cust">${esc(custName(e))} ${tierBadge(c)}</span>${assignSelect(e)}
-      <span class="meta mono">${whenTxt(e.received)} · ${esc(e.lang)} · confidence ${Number(e.conf).toFixed(2)}</span></header>
+    <header class="mail-h">${imp?'<span class="flag">Flagged</span>':''}${catChip(e.cat)}
+      ${e.tags.map(t=>`<span class="tag ${t==='Risk signal'?'risk':t==='Opportunity signal'?'opp':''}">${t}</span>`).join('')}
+      <span class="cust">${esc(c.short)} ${tierBadge(e.cust)}</span>
+      <span class="meta mono">${when(e)} · ${e.lang} · confidence ${e.conf.toFixed(2)}${e.status==='snoozed'?' · snoozed':''}</span></header>
     <div class="mail-b">
-      <div class="subj">${esc(e.subject)}</div>
-      <div class="note">${esc(e.summary)}</div>
+      <div class="subj">${esc(e.subj)}</div>
       ${gmailLine(e)}
-      ${origBlock(e)}
+      <details class="orig"><summary>Show original email</summary><div class="body">${esc(e.body)}</div><div class="from">${esc(e.from)}</div></details>
       <div class="two">
         <section><div class="box-h">Extracted requirements</div><dl class="fields">${fields}</dl></section>
         <section><div class="box-h">Reply draft</div>${draft}</section>
       </div>
-      ${imp?`<div class="rule"><span><b>Reminders & follow-up</b> · ${deadline(e).txt}</span>${dueTag(e)}</div>`:''}
+      ${imp?`<div class="rule"><span><b>Reminders & follow-up</b> · ${RULES[e.cat]}; ${deadline(e).txt}</span>${dueTag(e)}</div>`:''}
       <div class="actions">${acts}</div>
     </div></article>`;
 }
-const RES = {adopted:['Adopted','good'],edited:['Edited & adopted','good'],rejected:['Rejected','mute'],noaction:['No action','mute'],replied:['You replied in Gmail','good']};
+const RES = {adopted:['Adopted · draft in Gmail','good'],edited:['Edited & adopted · draft in Gmail','good'],rejected:['Rejected','mute'],noaction:['Confirmed, no reply needed','mute'],forwarded:['Forwarded to M. Schulz','mute']};
 function vQueue(){
-  const open = ST.emails.filter(isOpen).sort((a,b)=>{ const ia=isImp(a)?IMP_ORDER[a.category]:9, ib=isImp(b)?IMP_ORDER[b.category]:9; return ia-ib || new Date(b.received)-new Date(a.received); });
+  const all = S.emails, open = all.filter(isOpen).sort((a,b)=>{
+    const ia = isImp(a)?IMP_ORDER[a.cat]:9, ib = isImp(b)?IMP_ORDER[b.cat]:9;
+    return ia-ib || b.at-a.at;
+  });
   const flagged = open.filter(isImp), other = open.filter(e=>!isImp(e));
-  const done = ST.emails.filter(e=>!isOpen(e) && new Date(e.processed)>=daysAgo(2)).slice(0,40);
-  const last = ST.sync.last, fresh = last ? ST.emails.filter(e=>e.processed>=last).length : 0;
-  const labels = {}; ST.emails.filter(e=>new Date(e.processed)>=daysAgo(7)).forEach(e=>{ const l=e.label; labels[l]=labels[l]||{n:0,c:e.category}; labels[l].n++; });
+  const done = all.filter(e=>!isOpen(e));
+  const hl = flagged.length;
+  const labels = {}; all.forEach(e=>{ const l=LABEL(e.cat); labels[l]=labels[l]||{n:0,u:0,c:e.cat}; labels[l].n++; if(!readInGmail(e)) labels[l].u++; });
   const batch = other.filter(e=>e.conf>=.9 && !lowIdx(e).length);
-  const row = e => UI.expanded[e.id] ? mailCard(e) : `<div class="done-row">${catChip(e.category)}<span class="s"><b>${esc(custName(e))}</b> · ${esc(e.subject)}</span>
-      <span class="res mute mono">${whenTxt(e.received)}${isImp(e)?'':' · unread in Gmail'}</span><button type="button" class="btn ghost sm" data-act="expand" data-id="${e.id}">Details</button></div>`;
-  const hello = ST.kam_name ? `, ${esc(ST.kam_name)}` : '';
-  const h = new Date().getHours(), greet = h<12?'Good morning':h<18?'Good afternoon':'Good evening';
+  const row = e => (S.expanded && S.expanded[e.id]) ? mailCard(e) : `<div class="done-row">${catChip(e.cat)}<span class="s"><b>${esc(cust(e.cust).short)}</b> · ${esc(e.subj)}</span>
+      <span class="res mute mono">${when(e)} · unread in Gmail</span><button type="button" class="btn ghost sm" data-act="expand" data-id="${e.id}">Details</button></div>`;
+  const collapsed = other.filter(e=>!(S.expanded && S.expanded[e.id])), expanded = other.filter(e=>S.expanded && S.expanded[e.id]);
   return `<div class="view">
-    <div class="view-h"><div class="eyebrow">1 · Morning</div><h1>${greet}${hello}</h1>
-      <p class="lede">${last?`The last sync (${whenTxt(last)}) processed ${plural(fresh,'email')}.`:'No sync yet. Use “Set next sync → Sync now” at the top to read your mailbox for the first time.'} ${flagged.length?`<b>${plural(flagged.length,'flagged email')}</b> ${flagged.length===1?'is':'are'} waiting for you.`:'No flagged emails are waiting.'}</p></div>
-    ${ST.reminders.length?`<div class="panel"><h3>Today's reminders</h3><ul class="list">${ST.reminders.map(r=>`<li><span class="when">${esc(r[0])}</span>${esc(r[1])}</li>`).join('')}</ul></div>`:''}
-    ${Object.keys(labels).length?`<div><div class="box-h">Gmail labels · last 7 days</div><div class="strip">${Object.entries(labels).map(([l,v])=>`<span class="cat ${CAT_CLS[v.c]}"><span class="mono" style="font-weight:500">${esc(l)}</span><b>${v.n}</b></span>`).join('')}</div></div>`:''}
+    <div class="view-h"><div class="eyebrow">1 · Morning</div><h1>Good morning, Anna</h1>
+      <p class="lede">Between 17:40 yesterday and 07:55 today, your work mailbox received ${EMAILS.length} emails${S.injected?', plus 1 from the last sync':''}. Every email was classified and filed into its KAM label in Gmail. Flagged emails were marked read in Gmail and are handled here; the others stay unread in your inbox. ${hl?`<b>${plural(hl,'flagged email')}</b> ${hl===1?'is':'are'} waiting for you.`:'All flagged emails are handled.'}</p></div>
+    <div><div class="box-h">Gmail labels</div><div class="strip">${Object.entries(labels).map(([l,v])=>`<span class="cat ${CAT_CLS[v.c]}"><span class="mono" style="font-weight:500">${esc(l)}</span><b>${v.n}</b>${v.u?`<span style="font-weight:400;margin-left:4px">· ${v.u} unread</span>`:''}</span>`).join('')}</div></div>
     <div class="section-h"><h2>Flagged · ${flagged.length}</h2><span class="sub">Quotations, incidents, complaints · marked read in Gmail</span></div>
-    ${flagged.length?flagged.map(mailCard).join(''):'<div class="panel empty">No flagged emails waiting. Next: the Top 10 customers. <button type="button" class="btn sm primary" data-go="top10">Open Top 10</button></div>'}
+    ${flagged.length?flagged.map(mailCard).join(''):'<div class="panel empty">No flagged emails left. Next: the Top 10 priority customers. <button type="button" class="btn sm primary" data-go="top10">Open Top 10</button></div>'}
     <div class="section-h"><h2>Other emails · ${other.length}</h2><span class="sub">Subject only · still unread in Gmail</span>
       ${batch.length?`<button type="button" class="btn" data-act="batch">Confirm low-risk items (${batch.length})</button>`:''}</div>
-    ${other.filter(e=>UI.expanded[e.id]).map(row).join('')}
-    ${other.filter(e=>!UI.expanded[e.id]).length?`<div class="done-list">${other.filter(e=>!UI.expanded[e.id]).map(row).join('')}</div>`:(other.length?'':'<div class="panel empty">No other emails waiting.</div>')}
-    ${done.length?`<div class="section-h"><h2>Handled · last 2 days</h2><span class="sub">Undo works until a draft is in Gmail</span></div>
-      <div class="done-list">${done.map(e=>`<div class="done-row">${catChip(e.category)}<span class="s"><b>${esc(custName(e))}</b> · ${esc(e.subject)}</span>
-        <span class="res ${(RES[e.status]||['','mute'])[1]}">${(RES[e.status]||[e.status])[0]}${e.reason?' ('+esc(e.reason)+')':''}${e.draft_saved?' · in Gmail drafts':''}${e.sent&&e.status!=='replied'?' · sent':''}</span>
-        ${e.draft_saved||e.status==='replied'?'<span></span>':`<button type="button" class="btn ghost sm" data-act="undo" data-id="${e.id}">Undo</button>`}</div>`).join('')}</div>`:''}
+    ${expanded.map(row).join('')}
+    ${collapsed.length?`<div class="done-list">${collapsed.map(row).join('')}</div>`:(other.length?'':'<div class="panel empty">No other emails waiting.</div>')}
+    ${done.length?`<div class="section-h"><h2>Handled · ${done.length}</h2><span class="sub">Can be undone</span></div>
+      <div class="done-list">${done.map(e=>`<div class="done-row">${catChip(e.cat)}<span class="s"><b>${esc(cust(e.cust).short)}</b> · ${esc(e.subj)}</span>
+        <span class="res ${RES[e.status][1]}">${RES[e.status][0]}${e.reason?' ('+esc(e.reason)+')':''}${e.sent?' · sent':''} · <span class="lbl">${esc(LABEL(e.cat))}</span></span>
+        <button type="button" class="btn ghost sm" data-act="undo" data-id="${e.id}">Undo</button></div>`).join('')}</div>`:''}
   </div>`;
 }
 
-/* ---------- 2 top 10 ---------- */
+/* 2 top10 */
 function vTop10(){
   const list = top10();
-  if (!ST.customers.length) return `<div class="view"><div class="view-h"><div class="eyebrow">2 · Late morning</div><h1>Top 10 priority customers</h1></div><div class="panel empty">No customers yet. Fill in customers.csv and reload it under Settings.</div></div>`;
   return `<div class="view">
     <div class="view-h"><div class="eyebrow">2 · Late morning</div><h1>Top 10 priority customers</h1>
-      <p class="lede">Ranked by customer tier, open important items, waiting time, and risk and opportunity signals in the last 14 days of email. A customers with rising risk are marked red.</p></div>
-    ${list.length?`<div class="rank">${list.map((c,i)=>{
-      const s = signals(c.id), red = riskUp(c), called = calledToday(c.id);
+      <p class="lede">Ranked by customer tier, open important items, waiting time, and risk and opportunity signals in emails. A customers with rising risk are marked red. You can pin or demote any customer.</p></div>
+    <div class="rank">${list.map((cid,i)=>{
+      const s = signals(cid), red = riskUp(cid), c = CUST[cid];
       const why = [`<span class="tag">Tier ${c.tier}</span>`, ...s.items.map(x=>`<span class="tag item">${x}</span>`), s.overdue?`<span class="tag risk">${s.overdue}</span>`:'',
-        ...s.risk.map(x=>`<span class="tag risk">${esc(x)}</span>`), ...s.opp.map(x=>`<span class="tag opp">${esc(x)}</span>`)].join('');
-      return `<div class="rk ${red?'red':''} ${called?'called':''}"><div class="no">${i+1}</div>
-        <div><div class="nm">${esc(c.name)} ${tierBadge(c)}${red?'<span class="redflag">Risk rising</span>':''}${c.manual>0?'<span class="tag">Pinned</span>':''}</div>
-          <div class="why">${why}</div><div class="act">${esc(action(c))}</div></div>
-        <div class="btns"><button type="button" class="btn sm ${red?'primary':''}" data-act="card" data-c="${c.id}">Strategy card</button>
-          ${called?`<span class="called-mark">✓ Called ${called}</span>`:`<button type="button" class="btn sm" data-act="call" data-c="${c.id}">Called</button>`}
-          <div class="ctl"><button type="button" class="btn ghost sm" data-act="pin" data-c="${c.id}">Pin</button><button type="button" class="btn ghost sm" data-act="down" data-c="${c.id}">Demote</button></div></div></div>`;}).join('')}</div>`
-      :'<div class="panel empty">No customer emails in the last 30 days yet.</div>'}
+        ...s.risk.map(x=>`<span class="tag risk">${x}</span>`), ...s.opp.map(x=>`<span class="tag opp">${x}</span>`), s.meet?`<span class="tag">${s.meet}</span>`:''].join('');
+      return `<div class="rk ${red?'red':''} ${S.called[cid]?'called':''}">
+        <div class="no">${i+1}</div>
+        <div><div class="nm">${esc(c.name)} ${tierBadge(cid)} <span class="note">${c.place}</span>${red?'<span class="redflag">Risk rising</span>':''}${S.manual[cid]>0?'<span class="tag">Pinned</span>':''}</div>
+          <div class="why">${why}</div><div class="act">${action(cid)}</div></div>
+        <div class="btns"><button type="button" class="btn sm ${red?'primary':''}" data-act="card" data-c="${cid}">Strategy card</button>
+          ${S.called[cid]?`<span class="called-mark">✓ Called ${S.called[cid]}</span>`:`<button type="button" class="btn sm" data-act="call" data-c="${cid}">Called</button>`}
+          <div class="ctl"><button type="button" class="btn ghost sm" data-act="pin" data-c="${cid}">Pin</button><button type="button" class="btn ghost sm" data-act="down" data-c="${cid}">Demote</button></div></div>
+      </div>`;}).join('')}</div>
   </div>`;
 }
-function listOrEmpty(a, empty){ return a && a.length ? `<ul class="list">${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>` : `<p class="empty">${empty}</p>`; }
 function cardHTML(cid){
-  const c = custOf(cid), s = signals(cid), k = ST.cards[cid] && ST.cards[cid].card, busy = UI.busy==='card'+cid;
-  const open = ST.emails.filter(e=>e.customer_id===cid && isImp(e) && !e.sent && e.status!=='noaction');
+  const c = CUST[cid], s = signals(cid), k = CARDS[cid];
+  const open = S.emails.filter(e=>e.cust===cid && isImp(e) && !e.sent);
+  const src = S.emails.filter(e=>e.cust===cid);
+  const next = k ? k.next : [[action(cid),'Based on the to-dos in the email']];
   return `<div class="drawer-top"><div><div class="eyebrow">Customer strategy card</div><h2 id="drTitle">${esc(c.name)}</h2>
-      <div class="row-wrap" style="margin-top:6px">${tierBadge(c)}<span class="note">${esc(c.domains.join(', '))}</span>${riskUp(c)?'<span class="redflag">Risk rising</span>':''}</div></div>
+      <div class="row-wrap" style="margin-top:6px">${tierBadge(cid)}<span class="note">${c.place}</span>${riskUp(cid)?'<span class="redflag">Risk rising</span>':''}</div></div>
       <button type="button" class="btn ghost" data-act="close">Close</button></div>
-    <div class="panel"><h3>Open items from email</h3>${open.length?`<ul class="list">${open.map(e=>`<li>${catChip(e.category)} ${esc(e.subject)} <span class="note">· ${impState(e)}</span></li>`).join('')}</ul>`:'<p class="empty">No open important items.</p>'}
-      ${s.overdue?`<p class="note" style="color:var(--crit);margin:8px 0 0">${s.overdue}</p>`:''}
-      <div class="row-wrap" style="margin-top:8px">${s.risk.map(x=>`<span class="tag risk">${esc(x)}</span>`).join('')}${s.opp.map(x=>`<span class="tag opp">${esc(x)}</span>`).join('')}</div></div>
-    ${k?`<div class="panel"><h3>Overview</h3><p style="margin:0">${esc(k.overview)}</p><p class="note" style="margin:8px 0 0">Contacts: ${esc(c.contacts||'—')}</p></div>
-      <div class="panel"><h3>Suggested next steps</h3>${k.next_steps&&k.next_steps.length?`<ol class="list">${k.next_steps.map(n=>`<li><b>${esc(n.step)}</b><div class="note">Why: ${esc(n.why)}</div></li>`).join('')}</ol>`:'<p class="empty">None.</p>'}</div>
-      <div class="panel"><h3>Talking points</h3>${listOrEmpty(k.talking_points,'None.')}</div>
-      <p class="note">Generated ${whenTxt(k.created)} by the local model from this customer's last 25 emails.</p>`
-    :`<div class="panel"><p style="margin:0">No strategy card yet. The local model writes one from this customer's recent emails.</p></div>`}
-    <div class="actions"><button type="button" class="btn ${k?'':'primary'}" data-act="genCard" data-c="${cid}" ${busy?'disabled':''}>${busy?'Writing… this can take a minute':k?'Regenerate':'Generate strategy card'}</button>
-      ${calledToday(cid)?`<span class="called-mark">✓ Called ${calledToday(cid)}</span>`:`<button type="button" class="btn" data-act="call" data-c="${cid}">Mark as called</button>`}</div>`;
+    <div class="panel"><h3>Customer overview</h3><p style="margin:0">${k?k.sum:`Tier ${c.tier}. ${plural(TONE[cid][0],'email')} in the last 7 days.`}</p>
+      <p class="note" style="margin:8px 0 0">Contacts: ${c.contacts.join('; ')}</p></div>
+    <div class="panel"><h3>Open items</h3>${open.length?`<ul class="list">${open.map(e=>`<li>${catChip(e.cat)} ${esc(e.subj)} <span class="note">· ${impState(e)}</span></li>`).join('')}</ul>`:'<p class="empty">No open important items.</p>'}
+      ${s.overdue?`<p class="note" style="color:var(--crit);margin:8px 0 0">${s.overdue}</p>`:''}</div>
+    <div class="panel"><h3>Risks and opportunities</h3><div class="row-wrap">${s.risk.map(x=>`<span class="tag risk">${x}</span>`).join('')}${s.opp.map(x=>`<span class="tag opp">${x}</span>`).join('')}${!s.risk.length&&!s.opp.length?'<span class="empty">No risk or opportunity signals in emails.</span>':''}</div>
+      ${src.length?`<p class="note" style="margin:8px 0 0">Source emails: ${src.map(e=>esc(e.subj)).join('; ')}</p>`:''}</div>
+    <div class="panel"><h3>Suggested next steps</h3><ol class="list">${next.map(n=>`<li><b>${n[0]}</b><div class="note">Why: ${n[1]}</div></li>`).join('')}</ol></div>
+    ${k&&k.talk?`<div class="panel"><h3>Talking points</h3><ul class="list">${k.talk.map(t=>`<li>${t}</li>`).join('')}</ul></div>`:''}
+    <div class="actions">${S.called[cid]?`<span class="called-mark">✓ Called ${S.called[cid]}</span>`:`<button type="button" class="btn primary" data-act="call" data-c="${cid}">Mark as called</button>`}</div>`;
 }
 
-/* ---------- 3 brief ---------- */
+/* 3 brief */
 function vBrief(){
-  const withMail = ST.customers.filter(c=>ST.emails.some(e=>e.customer_id===c.id));
-  const cid = Number(UI.briefCid) || (withMail[0] && withMail[0].id) || 0;
-  const b = cid && ST.cards[cid] && ST.cards[cid].brief, c = custOf(cid), busy = UI.busy==='brief'+cid;
-  const panel = (t, a, empty) => `<div class="panel"><h3>${t}</h3>${listOrEmpty(a, empty)}</div>`;
+  const start = 14*60, left = start - S.min;
+  const e7 = S.emails.find(x=>x.id==='e7');
   return `<div class="view">
-    <div class="view-h"><div class="eyebrow">3 · Before meetings</div><h1>Pre-meeting brief</h1><p class="lede">Pick the customer you are meeting. The local model writes a one-page brief from your recent emails with them. Calendar access is not part of this version.</p></div>
-    ${withMail.length?`<form class="panel briefform" id="briefForm">
-      <label for="briefCust">Customer<select id="briefCust">${withMail.map(x=>`<option value="${x.id}" ${x.id===cid?'selected':''}>${esc(x.name)} (${x.tier})</option>`).join('')}</select></label>
-      <label for="briefTopic">Meeting topic <span class="note">(optional)</span><input id="briefTopic" value="${esc(UI.briefTopic)}" placeholder="e.g. quarterly review"></label>
-      <div class="actions"><button type="submit" class="btn primary" ${busy?'disabled':''}>${busy?'Writing… this can take a minute':b?'Regenerate brief':'Write brief'}</button></div></form>`
-      :'<div class="panel empty">No customer emails yet.</div>'}
-    ${b?`<div class="section-h"><h2>${esc(c.name)} ${tierBadge(c)}</h2><span class="sub">${b.topic?esc(b.topic)+' · ':''}written ${whenTxt(b.created)}</span></div>
-      <div class="grid2">${panel('Recent important emails',b.recent,'None.')}${panel('Open items',b.open_items,'None.')}${panel('Risks',b.risks,'No risk signals.')}${panel('Opportunities',b.opportunities,'None.')}</div>
-      <div class="grid2"><div class="panel"><h3>Suggested agenda</h3>${b.agenda&&b.agenda.length?`<ol class="list">${b.agenda.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:'<p class="empty">None.</p>'}</div>${panel('Questions to ask',b.questions,'None.')}</div>`:''}
+    <div class="view-h"><div class="eyebrow">3 · Before meetings</div><h1>Pre-meeting brief</h1><p class="lede">The app found today's customer meeting in your calendar (read-only) and prepared this brief from recent emails.</p></div>
+    <div class="panel brief-head"><div class="clock">14:00<small>to 15:00 · today</small></div>
+      <div><div style="font-weight:700;font-size:16px">Quarterly pharmacy meeting · Uniklinik Südtal ${tierBadge('c4')}</div>
+        <div class="note">Pharmacy, room 2.14 · Attendees: Markus Feld (Head of Purchasing), Dr. Sabine Roth (Chief Pharmacist)</div></div>
+      <div class="countdown">Starts in<b>${left>0?Math.floor(left/60)+' h '+(left%60)+' min':'In progress'}</b></div></div>
+    <div class="grid2">
+      <div class="panel"><h3>Recent important emails</h3><ul class="list">
+        <li><span class="when">18 Nov 18:20</span>Feld: bring bortezomib in-use stability data; considering a Q2 supply tender for the new day clinic</li>
+        <li><span class="when">3 Nov</span>Complaint: damaged outer packaging, replaced on 6 Nov, closed</li></ul></div>
+      <div class="panel"><h3>Open items</h3><ul class="list"><li>Bortezomib in-use stability data: hand over in the meeting</li>
+        <li>Reply draft: ${isOpen(e7)?'<span style="color:var(--warn)">still in the review queue</span>':e7.sent?'sent':'adopted, not yet sent'}</li></ul></div>
+      <div class="panel"><h3>Risks</h3><p class="empty" style="margin:0">No risk signals. Tone has been calm since the 3 Nov complaint was closed.</p></div>
+      <div class="panel"><h3>Opportunities</h3><div class="row-wrap"><span class="tag opp">New day clinic, Q2 supply tender</span></div>
+        <p class="note" style="margin:8px 0 0">Opportunity status: ${S.opps.find(o=>o.id==='o3').decision==='add'?'in the pipeline':'not yet confirmed (step 4)'}</p></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3>Suggested agenda</h3><ol class="list"><li>How the 3 Nov packaging issue was handled and improved</li><li>Bortezomib in-use stability data</li><li>Supply needs and tender plans for the new day clinic</li><li>Supply plan for Q1 2027</li></ol></div>
+      <div class="panel"><h3>Questions to ask</h3><ul class="list"><li>When will the tender be published? Which award criteria matter most?</li><li>Which products will the day clinic need, and in what monthly volumes?</li><li>Should we send qualification documents in advance?</li></ul></div>
+    </div>
   </div>`;
 }
 
-/* ---------- 4 opportunities & drafts ---------- */
+/* 4 pipeline & drafts */
 function vPipeline(){
-  const drafts = ST.emails.filter(e=>['adopted','edited'].includes(e.status) && e.draft && !e.sent);
-  const waiting = ST.emails.filter(e=>e.draft && isOpen(e));
-  const opps = ST.opps.filter(o=>!o.decision || new Date(o.created)>=daysAgo(7));
+  const drafts = S.emails.filter(e=>e.draft && ['adopted','edited'].includes(e.status));
+  const waiting = S.emails.filter(e=>e.draft && isOpen(e));
+  const maxCol = Math.max(1,...STAGES.map(x=>S.pipe.filter(p=>p.stage===x).length));
   return `<div class="view">
-    <div class="view-h"><div class="eyebrow">4 · Afternoon</div><h1>Opportunities & drafts</h1><p class="lede">Confirm the opportunities the model found in your emails. Finish drafts in Gmail and send them yourself; the app notices the sent reply at the next sync.</p></div>
-    <div class="section-h"><h2>Opportunities found in email</h2><span class="sub">${ST.opps.filter(o=>!o.decision).length} to confirm</span></div>
-    ${opps.length?`<div class="opps">${opps.map(o=>{const c=custOf(o.customer_id);return `<div class="opp ${o.decision?'decided':''}">
-      <div class="row-wrap"><b>${esc(c?c.short:'Unassigned customer')}</b>${tierBadge(c)}<span class="tag opp">${esc(o.title)}</span></div>
-      <div>${esc(o.summary)}</div><div class="src">Source: ${esc(o.src_subject||'')} · ${o.src_received?whenTxt(o.src_received):''}</div>
-      ${o.next?`<div class="nx"><b>Suggested next step</b> · ${esc(o.next)}</div>`:''}
+    <div class="view-h"><div class="eyebrow">4 · Afternoon</div><h1>Opportunities & drafts</h1><p class="lede">Confirm the opportunities AI found in your emails and add the ones you want to the pipeline. Drafts are finished and sent by you in Gmail; the app has no send permission.</p></div>
+    <div class="section-h"><h2>New opportunities found by AI</h2><span class="sub">${S.opps.filter(o=>!o.decision).length} to confirm</span></div>
+    <div class="opps">${S.opps.map(o=>`<div class="opp ${o.decision?'decided':''}">
+      <div class="row-wrap"><b>${esc(CUST[o.cust].short)}</b>${tierBadge(o.cust)}<span class="tag opp">Opportunity signal</span></div>
+      <div>${o.sum}</div><div class="src">Source email: ${o.src}</div>
+      <div class="nx"><b>Suggested next step</b> · ${o.next}</div>
       <div class="actions">${o.decision?`<span class="res ${o.decision==='add'?'good':'mute'}">${o.decision==='add'?'✓ Added to pipeline':'Ignored'}</span><button type="button" class="btn ghost sm" data-act="oppUndo" data-o="${o.id}">Undo</button>`
-        :`<button type="button" class="btn primary sm" data-act="oppAdd" data-o="${o.id}">Add to pipeline</button><button type="button" class="btn sm" data-act="oppIgnore" data-o="${o.id}">Ignore</button>`}</div></div>`;}).join('')}</div>`
-      :'<div class="panel empty">No new opportunities.</div>'}
-    <div class="section-h"><h2>Adopted drafts not yet sent</h2><span class="sub">${ST.modes.gmail_changes?'In your Gmail drafts':'Kept in the app (Gmail changes are off)'}</span></div>
-    <div class="drafts">${drafts.length?drafts.map(e=>`<div class="dr"><div>${catChip(e.category)} <b>${esc(custName(e))}</b> · ${esc(e.subject)}
-        <div class="s">${e.status==='edited'?'Edited & adopted':'Adopted'} · ${esc(e.lang)}${e.draft_saved?' · in Gmail drafts':''}${hasPh(draftOf(e))?' · <span class="phwarn">still has fields to fill in</span>':''}</div></div>
-        <span class="res mute">Waiting to be sent</span></div>`).join('')
-      :'<div class="dr"><span class="empty">No adopted drafts waiting.</span></div>'}
+        :`<button type="button" class="btn primary sm" data-act="oppAdd" data-o="${o.id}">Add to pipeline</button><button type="button" class="btn sm" data-act="oppIgnore" data-o="${o.id}">Ignore</button>`}</div></div>`).join('')}</div>
+    <div class="section-h"><h2>Drafts</h2><span class="sub">Once sent in Gmail, the status changes to “Waiting for customer” automatically. The demo uses a button for this.</span></div>
+    <div class="drafts">${drafts.length?drafts.map(e=>`<div class="dr"><div>${catChip(e.cat)} <b>${esc(cust(e.cust).short)}</b> · ${esc(e.subj)}
+        <div class="s">${e.status==='edited'?'Edited & adopted':'Adopted'} · ${e.lang} · Gmail drafts${hasPh(draftOf(e))?' · <span style="color:var(--hl-ink);background:var(--hl);padding:0 4px;border-radius:3px">still has fields to fill in</span>':''}</div></div>
+        ${e.sent?'<span class="res good">✓ Sent · waiting for customer</span>':`<button type="button" class="btn sm" data-act="sent" data-id="${e.id}">Sent in Gmail</button>`}</div>`).join('')
+      :'<div class="dr"><span class="empty">No adopted drafts yet.</span></div>'}
       ${waiting.length?`<div class="dr"><span class="s">${plural(waiting.length,'draft')} still waiting in the review queue.</span><button type="button" class="btn sm" data-go="queue">Go to review queue</button></div>`:''}</div>
-    <div class="section-h"><h2>Pipeline</h2><span class="sub">Kept in the app</span></div>
-    <div class="board">${STAGES.map(st=>{const cards=ST.pipeline.filter(p=>p.stage===st);return `<div class="col"><div class="col-h"><span>${st}</span><span class="mono">${cards.length}</span></div>
-      ${cards.map(p=>{const c=custOf(p.customer_id);return `<div class="card"><span class="c">${esc(c?c.short:'Unassigned')}</span><span>${esc(p.title)}</span>
-        <select data-act="stage" data-p="${p.id}" aria-label="Stage">${STAGES.map(x=>`<option ${x===p.stage?'selected':''}>${x}</option>`).join('')}</select></div>`;}).join('')}</div>`;}).join('')}</div>
+    <div class="section-h"><h2>Pipeline</h2><span class="sub">Lightweight pipeline, exportable as a spreadsheet, not written to a CRM in the first release</span></div>
+    <div class="board">${STAGES.map(st=>{const cards=S.pipe.filter(p=>p.stage===st);return `<div class="col"><div class="col-h"><span>${st}</span><span class="mono">${cards.length}</span></div>
+      ${cards.map(p=>`<div class="card ${p.fresh?'fresh':''}"><span class="c">${esc(CUST[p.cust].short)}</span><span>${esc(p.title)}</span>
+        <select data-act="stage" data-p="${p.id}" aria-label="Stage">${STAGES.map(x=>`<option ${x===p.stage?'selected':''}>${x}</option>`).join('')}</select></div>`).join('')}</div>`;}).join('')}</div>
   </div>`;
 }
 
-/* ---------- 5 end of day ---------- */
-function tomorrowItems(){
-  const out = [];
-  ST.emails.filter(e=>isImp(e) && !e.sent && e.status!=='noaction').forEach(e=>{
-    const c = custName(e);
-    out.push(e.category===C_INC?['Morning',`${c}: give the next update on the incident`]:e.category===C_CMP?['Morning',`${c}: follow up on the complaint`]:['As promised',`${c}: send the quotation`]);
-  });
-  ST.customers.filter(riskUp).filter(c=>!calledToday(c.id)).forEach(c=>out.push(['Morning',`Call ${c.short} (at-risk customer, not contacted today)`]));
-  ST.pipeline.filter(p=>p.stage==='New').forEach(p=>{ const c=custOf(p.customer_id); out.push(['Afternoon',`${c?c.short:'Customer'}: first follow-up on “${p.title}”`]); });
-  return out.slice(0,20);
-}
+/* 5 evening */
 function vEvening(){
-  const t = dkey(new Date()), today = e => dkey(new Date(e.processed))===t;
-  const todays = ST.emails.filter(today), logs = ST.log.filter(l=>dkey(new Date(l.ts))===t);
-  const done = ST.emails.filter(e=>!isOpen(e) && today(e)).length;
-  const adopted = ST.emails.filter(e=>e.status==='adopted' && today(e)).length, edited = ST.emails.filter(e=>e.status==='edited' && today(e)).length;
-  const calls = ST.calls.filter(c=>dkey(new Date(c.ts))===t).length;
-  const oppAdded = logs.filter(l=>l.text.startsWith('Added to pipeline')).length;
-  const openImp = ST.emails.filter(e=>isImp(e) && !e.sent && e.status!=='noaction'), openOther = ST.emails.filter(e=>!isImp(e) && isOpen(e));
-  const tmr = tomorrowItems(), saved = ST.reminders_tomorrow.length;
-  const tiles = [['Emails processed today',todays.length],['Handled',done],['Drafts adopted',adopted],['Edited & adopted',edited],['Opportunities added',oppAdded],['Follow-up calls',calls]];
+  const proc = S.emails.filter(e=>!isOpen(e));
+  const adopted = S.emails.filter(e=>e.status==='adopted').length, edited = S.emails.filter(e=>e.status==='edited').length;
+  const sentImp = S.emails.filter(e=>isImp(e)&&e.sent).length;
+  const oppAdded = S.opps.filter(o=>o.decision==='add').length;
+  const calls = Object.keys(S.called).length;
+  const openImp = S.emails.filter(e=>isImp(e) && !e.sent);
+  const openOther = S.emails.filter(e=>!isImp(e) && isOpen(e));
+  const tmr = [];
+  openImp.forEach(e=>{
+    const c=cust(e.cust).short;
+    tmr.push(e.cat===C_INC ? (e.id==='e1'?['By Friday',`${c}: confirm the PO 4471 change in writing`]:['Morning',`${c}: check the redelivery arrived`])
+      : e.cat===C_CMP ? ['09:00',`${c}: give the promised QA update`]
+      : ['As promised',`${c}: send the quotation`]);
+  });
+  Object.keys(CUST).filter(riskUp).filter(c=>!S.called[c]).forEach(c=>tmr.push(['Morning',`Call ${CUST[c].short} (at-risk customer, not contacted today)`]));
+  if (S.opps.find(o=>o.id==='o3').decision==='add') tmr.push(['Morning','Uniklinik Südtal: send minutes and next steps on the day-clinic tender']);
+  tmr.push(['10:30','MediPartner Wien: call (calendar)']);
+  const tiles = [['Emails handled',proc.length],['Drafts adopted',adopted],['Edited & adopted',edited],['Important items answered',sentImp],['Opportunities confirmed',oppAdded],['Follow-up calls',calls]];
   return `<div class="view">
-    <div class="view-h"><div class="eyebrow">5 · End of day</div><h1>Daily summary and tomorrow's reminders</h1><p class="lede">What you did today, what is still open, and the reminders for tomorrow. Saved reminders appear at the top of tomorrow's review queue.</p></div>
-    <div class="summary-tiles">${tiles.map(x=>`<div class="kpi"><div class="l">${x[0]}</div><div class="v">${x[1]}</div></div>`).join('')}</div>
+    <div class="view-h"><div class="eyebrow">5 · End of day</div><h1>Daily summary and tomorrow's reminders</h1><p class="lede">The app summarises what you did today, lists what is still open and prepares tomorrow's reminders. They appear on tomorrow morning's workspace and are pushed to your phone.</p></div>
+    <div class="summary-tiles">${tiles.map(t=>`<div class="kpi"><div class="l">${t[0]}</div><div class="v">${t[1]}</div></div>`).join('')}</div>
     <div class="grid2">
       <div class="panel"><h3>Still open · ${openImp.length+openOther.length}</h3>${openImp.length+openOther.length?`<ul class="list">
-        ${openImp.map(e=>`<li>${catChip(e.category)} <b>${esc(custName(e))}</b> · ${impState(e)}</li>`).join('')}
-        ${openOther.slice(0,15).map(e=>`<li>${catChip(e.category)} <b>${esc(custName(e))}</b> · ${ST_P}</li>`).join('')}</ul>`:'<p class="empty">Everything is closed.</p>'}</div>
-      <div class="panel"><h3>Reminders for tomorrow</h3>${tmr.length?`<ul class="list">${tmr.map(r=>`<li><span class="when">${esc(r[0])}</span>${esc(r[1])}</li>`).join('')}</ul>`:'<p class="empty">Nothing to remind.</p>'}
-        <div class="actions" style="margin-top:12px"><button type="button" class="btn primary" data-act="tomorrow" ${tmr.length?'':'disabled'}>${saved?'Save again':'Save for tomorrow'}</button>${saved?`<span class="res good">✓ ${plural(saved,'reminder')} saved</span>`:''}</div></div>
+        ${openImp.map(e=>`<li>${catChip(e.cat)} <b>${esc(cust(e.cust).short)}</b> · ${impState(e)}</li>`).join('')}
+        ${openOther.map(e=>`<li>${catChip(e.cat)} <b>${esc(cust(e.cust).short)}</b> · ${ST_P}</li>`).join('')}</ul>`:'<p class="empty">Everything is closed.</p>'}</div>
+      <div class="panel"><h3>Reminders for Fri 20 Nov</h3><ul class="list">${tmr.map(t=>`<li><span class="when">${t[0]}</span>${t[1]}</li>`).join('')}</ul>
+        <div class="actions" style="margin-top:12px">${S.tomorrow?'<span class="res good">✓ Created – on tomorrow\'s workspace and pushed to your phone</span>':'<button type="button" class="btn primary" data-act="tomorrow">Create tomorrow\'s reminders</button>'}</div></div>
     </div>
-    <div class="panel"><h3>Today's activity log</h3>${logs.length?`<div class="timeline">${logs.map(l=>`<div><span class="when">${hm(l.ts)}</span><span>${esc(l.text)}</span></div>`).join('')}</div>`:'<p class="empty">No activity today yet.</p>'}</div>
+    <div class="panel"><h3>Today's activity log</h3>${S.log.length?`<div class="timeline">${S.log.map(l=>`<div><span class="when">${l.t}</span><span>${esc(l.text)}</span></div>`).join('')}</div>`:'<p class="empty">No activity yet. Actions in the review queue, Top 10 or opportunities pages are logged here automatically.</p>'}</div>
   </div>`;
 }
 
-/* ---------- dashboard ---------- */
+/* manager: dashboard */
+function impItems(){ return [...HIST, ...S.emails.filter(isImp).map(e=>({cat:e.cat,cust:e.cust,state:impState(e)}))]; }
 function lateItems(){
-  const out = [];
-  ST.emails.filter(e=>isImp(e) && !e.sent && e.status!=='noaction').forEach(e=>{
-    const d = deadline(e), left = (d.at-Date.now())/6e4;
-    if (left < 180) out.push({late:left<0, e, txt:isOpen(e)?ST_P:'Reply not sent yet', due:left<0?'Overdue':`By ${hm(d.at)}`});
+  const out = [{late:true, cust:'c10', txt:'“Rückfrage Lieferplan Dezember” of 17 Nov unanswered', due:'2 working days overdue'}];
+  S.emails.filter(e=>isImp(e) && !e.sent).forEach(e=>{
+    const d = deadline(e), left = d.at - S.min;
+    out.push({late:left<0, cust:e.cust, cat:e.cat, txt:isOpen(e)?'To confirm':'Draft ready, not yet sent', due:left<0?`Overdue ${-left} min`:`By ${hm(d.at)}`});
   });
-  ST.emails.filter(e=>isOpen(e) && !isImp(e) && e.needs_reply && Date.now()-new Date(e.received)>864e5).forEach(e=>out.push({late:true,e,txt:'Unanswered for over a day',due:'Overdue'}));
   return out.sort((a,b)=>b.late-a.late);
 }
 function vDashboard(){
-  const pend = ST.emails.filter(e=>isOpen(e) && e.category!==C_INT), byCat = c => pend.filter(e=>e.category===c).length;
-  const late = lateItems(), risks = ST.customers.filter(c=>signals(c.id).risk.length);
-  const items = ST.emails.filter(isImp), states=[ST_P,ST_A,ST_W,ST_C], cls=['seg-p','seg-a','seg-w','seg-c'];
-  const maxCol = Math.max(1,...STAGES.map(x=>ST.pipeline.filter(p=>p.stage===x).length));
-  const active = ST.customers.filter(c=>custEmails(c.id,7).length);
+  const pend = S.emails.filter(e=>isOpen(e) && e.cat!==C_INT);
+  const byCat = c => pend.filter(e=>e.cat===c).length;
+  const late = lateItems(), risks = Object.keys(CUST).filter(c=>signals(c).risk.length);
+  const newOpps = S.opps.filter(o=>!o.decision).length;
+  const items = impItems(), states = [ST_P,ST_A,ST_W,ST_C], cls = ['seg-p','seg-a','seg-w','seg-c'];
+  const maxCol = Math.max(1,...STAGES.map(x=>S.pipe.filter(p=>p.stage===x).length));
   return `<div class="view">
-    <div class="view-h"><div class="eyebrow">Overview · live</div><h1>Dashboard</h1><p class="lede">Refreshes every 30 seconds while this page is open. Important items cover the last 35 days.</p></div>
+    <div class="view-h"><div class="eyebrow">Sales manager · live</div><h1>Real-time dashboard</h1>
+      <p class="lede">Updates within about one minute of a new email being processed. KAMs see “Mine”, sales managers see “Team”; the demo shows one KAM's data. Figures are by team and customer, with no individual ranking.</p>
+      <div class="note mono">Updated ${hm(S.min)}</div></div>
     <div class="kpis">
-      <div class="kpi hl"><div class="l">Pending</div><div class="v">${pend.length}</div><div class="d">Incidents ${byCat(C_INC)} · complaints ${byCat(C_CMP)} · quotations ${byCat(C_QUO)} · other ${pend.length-byCat(C_INC)-byCat(C_CMP)-byCat(C_QUO)}</div></div>
+      <div class="kpi hl"><div class="l">Pending today</div><div class="v">${pend.length}</div><div class="d">Incidents ${byCat(C_INC)} · complaints ${byCat(C_CMP)} · quotations ${byCat(C_QUO)} · other ${pend.length-byCat(C_INC)-byCat(C_CMP)-byCat(C_QUO)}</div></div>
       <div class="kpi crit"><div class="l">Overdue or due soon</div><div class="v">${late.length}</div><div class="d">Overdue ${late.filter(l=>l.late).length}</div></div>
-      <div class="kpi crit"><div class="l">At-risk customers</div><div class="v">${risks.length}</div><div class="d">Tier A ${risks.filter(c=>c.tier==='A').length}</div></div>
-      <div class="kpi good"><div class="l">Opportunities to confirm</div><div class="v">${ST.opps.filter(o=>!o.decision).length}</div><div class="d">Open in pipeline ${ST.pipeline.filter(p=>!['Won','Lost'].includes(p.stage)).length}</div></div>
+      <div class="kpi crit"><div class="l">At-risk customers</div><div class="v">${risks.length}</div><div class="d">Tier A ${risks.filter(c=>CUST[c].tier==='A').length}</div></div>
+      <div class="kpi good"><div class="l">New opportunities to confirm</div><div class="v">${newOpps}</div><div class="d">Open in pipeline ${S.pipe.filter(p=>!['Won','Lost'].includes(p.stage)).length}</div></div>
     </div>
     <div class="grid2">
-      <div class="panel"><h3>Overdue and due soon</h3>${late.length?`<div class="late-list">${late.map(l=>`<div class="late-item ${l.late?'is-late':''}"><span class="cat ${CAT_CLS[l.e.category]}">${esc(shortCat(l.e.category))}</span>
-        <span><b>${esc(custName(l.e))}</b> ${tierBadge(custOf(l.e.customer_id))} · ${l.txt}</span><span class="due mono ${l.late?'late':'soon'}">${l.due}</span></div>`).join('')}</div>`:'<p class="empty">Nothing overdue.</p>'}</div>
-      <div class="panel"><h3>At-risk customers</h3>${risks.length?`<div class="late-list">${risks.sort((a,b)=>a.tier.localeCompare(b.tier)).map(c=>`<div class="late-item ${riskUp(c)?'is-late':''}">${tierBadge(c)}
-        <span><b>${esc(c.short)}</b><br><span class="note">${esc(signals(c.id).risk.join(' · '))}</span></span><button type="button" class="btn sm" data-act="card" data-c="${c.id}">Strategy card</button></div>`).join('')}</div>`:'<p class="empty">No risk signals in the last 14 days.</p>'}</div>
+      <div class="panel"><h3>Overdue and due soon</h3><div class="late-list">${late.map(l=>`<div class="late-item ${l.late?'is-late':''}">${l.cat?`<span class="cat ${CAT_CLS[l.cat]}">${shortCat(l.cat)}</span>`:'<span class="cat crit">Unanswered</span>'}
+        <span><b>${esc(CUST[l.cust].short)}</b> ${tierBadge(l.cust)} · ${l.txt}</span><span class="due mono ${l.late?'late':'soon'}">${l.due}</span></div>`).join('')}</div></div>
+      <div class="panel"><h3>At-risk customers</h3><div class="late-list">${risks.sort((a,b)=>CUST[a].tier.localeCompare(CUST[b].tier)).map(c=>`<div class="late-item ${riskUp(c)?'is-late':''}">${tierBadge(c)}
+        <span><b>${esc(CUST[c].short)}</b><br><span class="note">${signals(c).risk.join(' · ')}</span></span>
+        <button type="button" class="btn sm" data-act="card" data-c="${c}">Strategy card</button></div>`).join('')}</div></div>
     </div>
     <div class="grid2">
-      <div class="panel"><h3>Important item status</h3><div class="bars">${[C_INC,C_CMP,C_QUO].map(c=>{const its=items.filter(i=>i.category===c), n=its.length;
-          return `<div class="bar-row"><span>${shortCat(c)}</span><div class="bar">${states.map((s,k)=>{const m=its.filter(i=>impState(i)===s).length;return m?`<span class="${cls[k]}" style="width:${m/n*100}%" title="${s} ${m}"></span>`:'';}).join('')}</div><span class="mono">${n}</span></div>`;}).join('')}
-        <div class="legend">${states.map((s,k)=>`<span><i class="${cls[k]}"></i>${s} ${items.filter(i=>impState(i)===s).length}</span>`).join('')}</div></div></div>
-      <div class="panel"><h3>Opportunity pipeline</h3><div class="bars">${STAGES.map(st=>{const m=ST.pipeline.filter(p=>p.stage===st).length;return `<div class="bar-row"><span>${st}</span><div class="bar"><span class="${st==='Won'?'seg-c':st==='Lost'?'seg-l':'seg-a'}" style="width:${m/maxCol*100}%"></span></div><span class="mono">${m}</span></div>`;}).join('')}</div></div>
+      <div class="panel"><h3>Important item status · last 30 days</h3><div class="bars">${[C_INC,C_CMP,C_QUO].map(c=>{
+          const its = items.filter(i=>i.cat===c), n = its.length;
+          return `<div class="bar-row"><span>${shortCat(c)}</span><div class="bar">${states.map((s,k)=>{const m=its.filter(i=>i.state===s).length;return m?`<span class="${cls[k]}" style="width:${m/n*100}%" title="${s} ${m}"></span>`:'';}).join('')}</div><span class="mono">${n}</span></div>`;}).join('')}
+        <div class="legend">${states.map((s,k)=>`<span><i class="${cls[k]}"></i>${s} ${items.filter(i=>i.state===s).length}</span>`).join('')}</div></div></div>
+      <div class="panel"><h3>Opportunity pipeline</h3><div class="bars">${STAGES.map(st=>{const m=S.pipe.filter(p=>p.stage===st).length;return `<div class="bar-row"><span>${st}</span><div class="bar"><span class="${st==='Won'?'seg-c':st==='Lost'?'':'seg-a'}" style="width:${m/maxCol*100}%;${st==='Lost'?'background:var(--muted)':''}"></span></div><span class="mono">${m}</span></div>`;}).join('')}</div></div>
     </div>
-    <div><div class="section-h" style="margin-bottom:10px"><h2>Customer emails and tone</h2><span class="sub">Last 7 days, compared with the 7 days before</span></div>
-    ${active.length?`<div class="tbl-wrap"><table><thead><tr><th>Customer</th><th>Tier</th><th class="num">Emails</th><th>Tone trend</th><th>Flags</th></tr></thead><tbody>
-      ${active.map(c=>{const s=signals(c.id), t=tone(c.id);return `<tr><td>${esc(c.short)}</td><td>${tierBadge(c)}</td><td class="num">${custEmails(c.id,7).length}</td>
-        <td class="trend-${t}">${TONE_TXT[t]}</td><td>${s.risk.length?'<span class="tag risk">Risk</span> ':''}${s.opp.length?'<span class="tag opp">Opportunity</span> ':''}${s.overdue?'<span class="tag risk">Overdue</span>':''}</td></tr>`;}).join('')}
-    </tbody></table></div>`:'<div class="panel empty">No customer emails in the last 7 days.</div>'}</div>
+    <div><div class="section-h" style="margin-bottom:10px"><h2>Customer emails and tone</h2><span class="sub">Last 7 days</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Customer</th><th>Tier</th><th class="num">Emails</th><th>Tone trend</th><th>Flags</th></tr></thead><tbody>
+      ${Object.keys(CUST).map(c=>{const t=TONE[c], s=signals(c);return `<tr><td>${esc(CUST[c].short)}</td><td>${tierBadge(c)}</td><td class="num">${t[0]+(c==='c10'&&S.injected?1:0)}</td>
+        <td class="trend-${t[1]}">${TONE_TXT[t[1]]}</td>
+        <td>${s.risk.length?'<span class="tag risk">Risk</span> ':''}${s.opp.length?'<span class="tag opp">Opportunity</span>':''}${s.overdue?'<span class="tag risk">Overdue</span>':''}</td></tr>`;}).join('')}
+    </tbody></table></div></div>
   </div>`;
 }
 
-/* ---------- report ---------- */
+/* manager: daily report */
+const MANAGERS = ['Katrin Vogel · Sales Manager DACH','Mārtiņš Ozols · Sales Manager Baltics','Head of Sales · Lukas Brenner'];
+function fwdBlock(){
+  const sent = (S.fwd||[]).map(f=>`<div class="res good">✓ Forwarded to ${esc(f.to)} at ${f.t}</div>`).join('');
+  if (!S.fwdOpen) return `<div class="panel fwd"><div class="fwd-row"><div><b>Share this report</b><div class="note">Sent from the app's notification address, not from your Gmail.</div></div>
+    <button type="button" class="btn primary" data-act="fwdOpen">Forward to sales manager</button></div>${sent?`<div class="fwd-sent">${sent}</div>`:''}</div>`;
+  return `<div class="panel fwd"><form class="fwd-form" id="fwdForm">
+    <label for="fwdTo">To</label><select id="fwdTo">${MANAGERS.map(m=>`<option>${esc(m)}</option>`).join('')}</select>
+    <label for="fwdNote">Note <span class="note">(optional)</span></label><textarea id="fwdNote" rows="3" placeholder="e.g. Please look at Klinikum Nordhafen before 10:00."></textarea>
+    <div class="actions"><button type="submit" class="btn primary">Send report</button><button type="button" class="btn ghost" data-act="fwdCancel">Cancel</button>
+    <span class="note">The report goes as a link plus a PDF summary from the app's notification address.</span></div></form>${sent?`<div class="fwd-sent">${sent}</div>`:''}</div>`;
+}
+
 function vReport(){
-  const days = []; for (let i=1;i<=14;i++){ const d=new Date(); d.setDate(d.getDate()-i); days.push(dkey(d)); }
-  const today = new Date(); const tk = dkey(today); days.unshift(tk);
-  const day = UI.reportDay || days[1];
-  const es = ST.emails.filter(e=>dkey(new Date(e.received))===day && e.category!==C_INT);
-  const handled = es.filter(e=>!isOpen(e)).length;
-  const nc = c => es.filter(e=>e.category===c).length, cc = c => es.filter(e=>e.category===c && (e.sent || e.status==='noaction')).length;
-  const overdue = es.filter(e=>isImp(e) && !e.sent && e.status!=='noaction' && deadline(e).at < Date.now());
-  const byCust = {}; es.forEach(e=>{ if(!e.customer_id) return; const b=byCust[e.customer_id]=byCust[e.customer_id]||{risk:[],opp:[]}; b.risk.push(...e.risk); b.opp.push(...e.opp); });
-  const riskC = Object.entries(byCust).filter(([,v])=>v.risk.length), oppC = Object.entries(byCust).filter(([,v])=>v.opp.length);
-  const label = d => d===tk ? 'Today' : new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
   return `<div class="view">
-    <div class="view-h"><div class="eyebrow">Overview · any day</div><h1>Daily report</h1>
-      <label class="report-day" for="reportDay">Emails received on <select id="reportDay">${days.map(d=>`<option value="${d}" ${d===day?'selected':''}>${label(d)}</option>`).join('')}</select></label></div>
+    <div class="view-h"><div class="eyebrow">Sales manager · every working day</div><h1>Daily customer performance report</h1>
+      <div class="report-meta"><span>Covers: Wed 18 Nov 2026</span><span>Generated: 19 Nov 08:15, after the 08:00 sync</span><span>Sample data</span></div></div>
+    ${fwdBlock()}
     <div class="kpis three">
-      <div class="kpi"><div class="l">Received / handled / pending</div><div class="v">${es.length} / ${handled} / ${es.length-handled}</div><div class="d">Internal emails not counted</div></div>
-      <div class="kpi crit"><div class="l">Important items overdue</div><div class="v">${overdue.length}</div><div class="d">${overdue.length?esc(uniq(overdue.map(custName)).join(', ')):'None'}</div></div>
-      <div class="kpi"><div class="l">New / closed</div><div class="v" style="font-size:16px;line-height:1.7">Quotations ${nc(C_QUO)} / ${cc(C_QUO)}<br>Complaints ${nc(C_CMP)} / ${cc(C_CMP)} · Incidents ${nc(C_INC)} / ${cc(C_INC)}</div></div>
+      <div class="kpi"><div class="l">Received / handled / pending</div><div class="v">23 / 17 / 6</div><div class="d">Pending are mostly overnight emails</div></div>
+      <div class="kpi crit"><div class="l">Overdue replies</div><div class="v">1</div><div class="d">Praxisklinik Elbufer</div></div>
+      <div class="kpi"><div class="l">New / closed</div><div class="v" style="font-size:16px;line-height:1.7">Quotations 3 / 1<br>Complaints 1 / 0 · Incidents 0 / 0</div></div>
     </div>
     <div class="grid2">
-      <div class="panel"><h3>At-risk customers</h3>${riskC.length?`<ul class="list">${riskC.map(([id,v])=>{const c=custOf(Number(id));return `<li><b>${esc(c.short)}</b> ${tierBadge(c)} · ${esc(uniq(v.risk).join('; '))}<div class="note">Suggested: ${esc(action(c))}</div></li>`;}).join('')}</ul>`:'<p class="empty">No risk signals that day.</p>'}</div>
-      <div class="panel"><h3>Opportunity customers</h3>${oppC.length?`<ul class="list">${oppC.map(([id,v])=>{const c=custOf(Number(id));return `<li><b>${esc(c.short)}</b> ${tierBadge(c)} · ${esc(uniq(v.opp).join('; '))}</li>`;}).join('')}</ul>`:'<p class="empty">No opportunity signals that day.</p>'}</div>
+      <div class="panel"><h3>At-risk customers</h3><ul class="list">
+        <li><b>Klinikum Nordhafen</b> ${tierBadge('c1')} · Advance notice of a cold-chain deviation (16:30), 2nd this quarter; tone getting harsher.<div class="note">Suggested: call Dr. Kühn this morning.</div></li>
+        <li><b>Praxisklinik Elbufer</b> ${tierBadge('c10')} · Email of 17 Nov unanswered for 2 working days.<div class="note">Suggested: answer the December supply plan question today.</div></li></ul></div>
+      <div class="panel"><h3>Opportunity customers</h3><ul class="list">
+        ${['o1','o3','o2'].map(id=>{const o=S.opps.find(x=>x.id===id);return `<li><b>${esc(CUST[o.cust].short)}</b> ${tierBadge(o.cust)} · ${o.title}<div class="note">Suggested: ${o.next} · ${o.decision==='add'?'in the pipeline':'not in the pipeline'}</div></li>`;}).join('')}</ul></div>
     </div>
+    <div class="panel"><h3>Needs manager attention</h3><ul class="list"><li>Praxisklinik Elbufer: email unanswered for 2 working days.</li><li>Klinikum Nordhafen: escalates automatically if the complaint has no first reply by 17:30 today.</li></ul></div>
+    <p class="note">The report works at customer and team level, to find customer problems and allocate resources. It does not rank individual KAMs and is not used for individual performance reviews.</p>
   </div>`;
 }
 
-/* ---------- settings ---------- */
-function vSettings(){
-  const m = ST.modes;
-  return `<div class="view">
-    <div class="view-h"><div class="eyebrow">Settings</div><h1>Settings</h1><p class="lede">Settings live in config.json in the app folder. Change them there, then restart the app.</p></div>
-    <div class="tbl-wrap"><table><tbody>
-      <tr><th>Mailbox</th><td>${esc(ST.mailbox)}</td></tr>
-      <tr><th>Local model</th><td class="mono">${esc(ST.model)}</td></tr>
-      <tr><th>Daily sync</th><td>${esc(ST.daily_sync_time)} Central European Time, plus any sync you set</td></tr>
-      <tr><th>Labels and read status in Gmail</th><td>${m.gmail_changes?'On – emails are filed into '+esc(ST.label_prefix)+'/… labels and flagged emails are marked read':'Off (shadow mode) – Gmail is not changed'} <span class="note">(gmail_changes)</span></td></tr>
-      <tr><th>Reply drafts</th><td>${m.drafts?'On':'Off'} <span class="note">(generate_drafts)</span></td></tr>
-    </tbody></table></div>
-    <div class="section-h"><h2>Customers · ${ST.customers.length}</h2><button type="button" class="btn" data-act="reloadCustomers">Reload customers.csv</button></div>
-    ${ST.customers.length?`<div class="tbl-wrap"><table><thead><tr><th>Customer</th><th>Tier</th><th>Email domains</th><th>Contacts</th></tr></thead><tbody>
-      ${ST.customers.map(c=>`<tr><td>${esc(c.name)}</td><td>${tierBadge(c)}</td><td class="mono">${esc(c.domains.join(', '))}</td><td>${esc(c.contacts||'')}</td></tr>`).join('')}</tbody></table></div>`
-      :'<div class="panel empty">No customers loaded. Fill in customers.csv in the app folder, then press “Reload customers.csv”.</div>'}
-  </div>`;
+function syncPopHTML(){
+  return `<form id="syncForm" class="syncform">
+    <div><b>Next mailbox sync</b><div class="note">Last sync ${syncL(S.lastSyncT)} · next ${syncL(S.nextSync)} · now ${hm(S.min)}</div></div>
+    <p class="note" style="margin:0">Without a manual time, the mailbox syncs only once a day, at 08:00 Central European Time.</p>
+    <div class="row-wrap"><button type="button" class="btn sm" data-act="syncQuick" data-m="0">Now</button><button type="button" class="btn sm" data-act="syncQuick" data-m="15">In 15 min</button><button type="button" class="btn sm" data-act="syncQuick" data-m="60">In 1 hour</button></div>
+    <label class="synclbl" for="syncTime">Or pick a time today<input type="time" id="syncTime" step="300" value="${hm(S.manualNext?S.nextSync:S.min)}"></label>
+    ${S.syncErr?`<div class="syncerr">${S.syncErr}</div>`:''}
+    ${!S.manualNext?`<div class="syncwarn">The next automatic sync is tomorrow at 08:00. New emails, including incidents, wait until then unless you set a sync.</div>`:''}
+    <div class="actions"><button type="submit" class="btn primary sm">Save</button><button type="button" class="btn ghost sm" data-act="syncClose">Cancel</button></div>
+    <p class="note" style="margin:0">After this sync, the app goes back to the daily 08:00 sync.</p>
+    ${S.manualNext?'<button type="button" class="btn ghost sm demo-jump" data-act="syncJump">Demo only: move the clock to the next sync</button>':''}
+  </form>`;
+}
+function setNextSync(t){
+  if (t < S.min) { S.syncErr = `Pick a time from ${hm(S.min)} onwards.`; return false; }
+  if (t >= 24*60) { S.syncErr = 'Pick a time before midnight.'; return false; }
+  S.syncErr = null; S.nextSync = t; S.manualNext = true; S.syncOpen = false;
+  if (t <= S.min) { const had = S.injected; log('Manual sync started'); tick(0); if (had) toast(`Synced at ${hm(t)} – no new emails`); }
+  else { log(`Next sync set manually to ${hm(t)}`); toast(`Next sync set to ${hm(t)}`); }
+  return true;
 }
 
 /* ---------- render & routing ---------- */
-const RENDER = {queue:vQueue,top10:vTop10,brief:vBrief,pipeline:vPipeline,evening:vEvening,dashboard:vDashboard,report:vReport,settings:vSettings};
+const RENDER = {queue:vQueue,top10:vTop10,brief:vBrief,pipeline:vPipeline,evening:vEvening,dashboard:vDashboard,report:vReport};
 function render(){
-  if (!ST) return;
-  renderTop(); renderRail();
-  $('#main').innerHTML = RENDER[UI.view]();
-  if (UI.drawer) $('#drawerPanel').innerHTML = cardHTML(UI.drawer);
+  $('#clock').textContent = 'Thu 19 Nov ' + hm(S.min);
+  $('#sync').textContent = `Gmail sync · last ${syncL(S.lastSyncT)} · next ${syncL(S.nextSync)}${S.manualNext?' (set manually)':' (daily 08:00 CET)'}`;
+  const pop = $('#syncpop'); pop.hidden = !S.syncOpen; $('#syncBtn').setAttribute('aria-expanded', S.syncOpen?'true':'false');
+  if (S.syncOpen) pop.innerHTML = syncPopHTML();
+  renderRail();
+  $('#main').innerHTML = RENDER[S.view]();
+  if (!$('#drawer').hidden && S.drawerC) $('#drawerPanel').innerHTML = cardHTML(S.drawerC);
 }
-function go(v){ if(!RENDER[v]) v='queue'; UI.view=v; try{ if(location.hash!=='#'+v) history.replaceState(null,'','#'+v); }catch(_){} render(); window.scrollTo({top:0}); }
-function openCard(cid){ UI.drawer=cid; $('#drawerPanel').innerHTML=cardHTML(cid); $('#drawer').hidden=false; const b=$('#drawerPanel [data-act="close"]'); b&&b.focus(); }
-function closeCard(){ $('#drawer').hidden=true; UI.drawer=null; }
+function go(v){ if(!RENDER[v]) v='queue'; S.view=v; try{ if(location.hash!=='#'+v) history.replaceState(null,'','#'+v); }catch(_){} render(); window.scrollTo({top:0}); }
+function openCard(cid){ S.drawerC=cid; $('#drawerPanel').innerHTML=cardHTML(cid); $('#drawer').hidden=false; $('#drawerPanel').querySelector('[data-act="close"]').focus(); }
+function closeCard(){ $('#drawer').hidden=true; S.drawerC=null; }
 
-document.addEventListener('click', async ev=>{
+/* ---------- actions ---------- */
+const byId = id => S.emails.find(e=>e.id===id);
+document.addEventListener('click', ev=>{
   const g = ev.target.closest('[data-go]'); if (g){ go(g.dataset.go); return; }
   const b = ev.target.closest('[data-act]'); if (!b || b.tagName==='SELECT') return;
-  const a = b.dataset.act, id = b.dataset.id ? Number(b.dataset.id) : null, cid = b.dataset.c ? Number(b.dataset.c) : null;
+  const a = b.dataset.act, e = b.dataset.id ? byId(b.dataset.id) : null, cid = b.dataset.c;
   switch(a){
-    case 'confirm': { const v=$(`#lf-${id}-${b.dataset.i}`).value; await act({act:'confirm', id, i:Number(b.dataset.i), value:v}); return; }
-    case 'adopt': await act({act:'adopt', id}); return;
-    case 'edit': UI.editing=id; UI.rejecting=null; render(); { const t=$(`#ta-${id}`); t&&t.focus(); } return;
-    case 'saveEdit': { const t=$(`#ta-${id}`).value; UI.editing=null; await act({act:'saveEdit', id, text:t}); return; }
-    case 'cancelEdit': UI.editing=null; render(); return;
-    case 'reject': UI.rejecting=id; UI.editing=null; render(); return;
-    case 'rejectWhy': UI.rejecting=null; await act({act:'reject', id, reason:b.dataset.r}); return;
-    case 'cancelReject': UI.rejecting=null; render(); return;
-    case 'noaction': await act({act:'noaction', id}); return;
-    case 'undo': await act({act:'undo', id}); return;
-    case 'batch': await act({act:'batch'}); return;
-    case 'expand': UI.expanded[id]=!UI.expanded[id]; render(); return;
-    case 'orig': UI.orig[id]={loading:true}; render();
-      try { const j = await api('/api/original?id='+id); UI.orig[id]={text:j.text}; } catch(e){ UI.orig[id]={error:e.message}; }
-      render(); return;
-    case 'origHide': delete UI.orig[id]; render(); return;
+    case 'confirm': { const i=+b.dataset.i, v=$(`#lf-${e.id}-${i}`).value.trim(); e.fields[i][1]=v||e.fields[i][1]; e.confirmed.push(i); tick(1); log(`Checked “${e.fields[i][0]}” for ${cust(e.cust).short}`); break; }
+    case 'adopt': if(needsConfirm(e)) return toast('Check the yellow fields first'); e.status='adopted'; tick(2); log(`Adopted draft: ${cust(e.cust).short} · ${e.cat}`); toast('Adopted – the draft is in your Gmail drafts'); break;
+    case 'edit': S.editing=e.id; S.rejecting=null; break;
+    case 'saveEdit': { const t=$(`#ta-${e.id}`); e.draftEdited=t.value; e.status='edited'; S.editing=null; tick(4); log(`Edited and adopted draft: ${cust(e.cust).short} · ${e.cat}`); toast('Edits saved – the draft is in your Gmail drafts'); break; }
+    case 'cancelEdit': S.editing=null; break;
+    case 'reject': S.rejecting=e.id; S.editing=null; break;
+    case 'rejectWhy': e.status='rejected'; e.reason=b.dataset.r; S.rejecting=null; tick(1); log(`Rejected draft (${e.reason}): ${cust(e.cust).short}`); break;
+    case 'cancelReject': S.rejecting=null; break;
+    case 'forward': e.status='forwarded'; tick(1); log(`Forwarded to M. Schulz: ${cust(e.cust).short} · ${e.subj}`); toast('Forwarded to M. Schulz'); break;
+    case 'snooze': e.status='snoozed'; tick(1); toast('Snoozed – reminder again at 10:00'); break;
+    case 'noaction': e.status='noaction'; tick(1); log(`Marked no action: ${e.subj}`); break;
+    case 'undo': e.status='pending'; e.sent=false; e.reason=null; delete e.draftEdited; break;
+    case 'batch': { const list=S.emails.filter(x=>isOpen(x)&&!isImp(x)&&x.conf>=.9&&!lowIdx(x).length); list.forEach(x=>x.status=x.draft?'adopted':'noaction'); tick(1); log(`Confirmed ${list.length} low-risk items in bulk`); toast(`Confirmed ${plural(list.length,'item')}`); break; }
+    case 'sent': e.sent=true; tick(3); log(`Reply sent in Gmail: ${cust(e.cust).short} · ${e.cat}`); toast(isImp(e)?'Status changed to “Waiting for customer”':'Recorded as sent'); break;
     case 'card': openCard(cid); return;
-    case 'genCard': await act({act:'card', cid}); return;
     case 'close': closeCard(); return;
-    case 'call': await act({act:'call', cid}); return;
-    case 'pin': await act({act:'pin', cid}); return;
-    case 'down': await act({act:'down', cid}); return;
-    case 'oppAdd': await act({act:'oppAdd', oid:Number(b.dataset.o)}); return;
-    case 'oppIgnore': await act({act:'oppIgnore', oid:Number(b.dataset.o)}); return;
-    case 'oppUndo': await act({act:'oppUndo', oid:Number(b.dataset.o)}); return;
-    case 'tomorrow': await act({act:'tomorrow', items:tomorrowItems()}); return;
-    case 'reloadCustomers': await act({act:'reloadCustomers'}); return;
-    case 'syncOpen': UI.syncOpen=!UI.syncOpen; renderTop(); if(UI.syncOpen){ const t=$('#syncTime'); t&&t.focus(); } return;
-    case 'syncClose': UI.syncOpen=false; renderTop(); return;
-    case 'syncQuick': { const ok = await act({act:'setNextSync', when:b.dataset.m==='now'?'now':Number(b.dataset.m)}); if (ok){ UI.syncOpen=false; renderTop(); setTimeout(poll, 1500); } return; }
+    case 'call': S.called[cid]=hm(S.min); tick(12); log(`Follow-up call: ${CUST[cid].short}`); toast(`Call recorded: ${CUST[cid].short}`); break;
+    case 'pin': S.manual[cid]=(S.manual[cid]||0)+60; toast(`Pinned ${CUST[cid].short}`); break;
+    case 'down': S.manual[cid]=(S.manual[cid]||0)-40; toast(`Demoted ${CUST[cid].short}`); break;
+    case 'oppAdd': { const o=S.opps.find(x=>x.id===b.dataset.o); o.decision='add'; S.pipe.unshift({id:'p-'+o.id,cust:o.cust,title:o.title,stage:'New',fresh:true}); tick(1); log(`Added to pipeline: ${CUST[o.cust].short} · ${o.title}`); break; }
+    case 'oppIgnore': { const o=S.opps.find(x=>x.id===b.dataset.o); o.decision='ignore'; tick(1); log(`Ignored opportunity: ${CUST[o.cust].short}`); break; }
+    case 'oppUndo': { const o=S.opps.find(x=>x.id===b.dataset.o); o.decision=null; S.pipe=S.pipe.filter(p=>p.id!=='p-'+o.id); break; }
+    case 'fwdOpen': S.fwdOpen=true; render(); setTimeout(()=>{const t=$('#fwdTo'); t&&t.focus();}); return;
+    case 'expand': S.expanded=S.expanded||{}; S.expanded[e.id]=!S.expanded[e.id]; break;
+    case 'syncOpen': S.syncOpen=!S.syncOpen; S.syncErr=null; render(); if(S.syncOpen){ const t=$('#syncTime'); t&&t.focus(); } return;
+    case 'syncClose': S.syncOpen=false; S.syncErr=null; break;
+    case 'syncQuick': setNextSync(S.min + Number(b.dataset.m)); break;
+    case 'syncJump': if(!S.manualNext) return; S.syncOpen=false; S.min = Math.max(S.min, S.nextSync); tick(0); break;
+    case 'fwdCancel': S.fwdOpen=false; break;
+    case 'tomorrow': S.tomorrow=true; log('Created tomorrow\'s reminders'); toast('Tomorrow\'s reminders created – on the workspace tomorrow morning and pushed to your phone'); break;
+    case 'reset': init(); closeCard(); S.view='queue'; try{history.replaceState(null,'','#queue')}catch(_){}; toast('Demo reset'); break;
+    default: return;
   }
+  render();
 });
-document.addEventListener('change', async ev=>{
-  const s = ev.target;
-  if (s.matches('select[data-act="stage"]')) { await act({act:'stage', pid:Number(s.dataset.p), stage:s.value}); return; }
-  if (s.matches('select[data-act="assign"]') && s.value) { await act({act:'assign', id:Number(s.dataset.id), customer_id:Number(s.value)}); return; }
-  if (s.id==='reportDay') { UI.reportDay=s.value; render(); return; }
-  if (s.id==='briefCust') { UI.briefCid=s.value; render(); return; }
+document.addEventListener('change', ev=>{
+  const s = ev.target.closest('select[data-act="stage"]'); if(!s) return;
+  const p = S.pipe.find(x=>x.id===s.dataset.p); p.stage=s.value; p.fresh=false; tick(1); log(`Pipeline: ${CUST[p.cust].short} · ${p.title} → ${p.stage}`); render();
 });
-document.addEventListener('submit', async ev=>{
-  ev.preventDefault();
-  if (ev.target.id==='syncForm'){ const v=$('#syncTime').value; const ok = await act({act:'setNextSync', when:v}); if (ok){ UI.syncOpen=false; renderTop(); } return; }
-  if (ev.target.id==='briefForm'){ UI.briefCid=$('#briefCust').value; UI.briefTopic=$('#briefTopic').value; await act({act:'brief', cid:Number(UI.briefCid), topic:UI.briefTopic}); return; }
+document.addEventListener('submit', ev=>{
+  if (ev.target.id==='syncForm'){ ev.preventDefault(); const v=$('#syncTime').value; if(!/^\d\d:\d\d$/.test(v)){ S.syncErr='Enter a time as hh:mm.'; render(); return; }
+    const [h,m]=v.split(':').map(Number); setNextSync(h*60+m); render(); return; }
+  if (ev.target.id!=='fwdForm') return; ev.preventDefault();
+  const to=$('#fwdTo').value, note=$('#fwdNote').value.trim();
+  S.fwd=(S.fwd||[]).concat({to,t:hm(S.min)}); S.fwdOpen=false; tick(1);
+  log(`Forwarded the daily report to ${to.split(' · ')[0]}${note?' with a note':''}`); toast(`Report forwarded to ${to.split(' · ')[0]}`); render();
 });
-document.addEventListener('keydown', ev=>{ if(ev.key!=='Escape') return; if(UI.syncOpen){ UI.syncOpen=false; renderTop(); return; } if(!$('#drawer').hidden) closeCard(); });
-window.addEventListener('hashchange', ()=>{ const v=location.hash.slice(1); if(v!==UI.view && RENDER[v]) go(v); });
+document.addEventListener('keydown', ev=>{ if(ev.key!=='Escape') return; if(S.syncOpen){ S.syncOpen=false; render(); return; } if(!$('#drawer').hidden) closeCard(); });
+window.addEventListener('hashchange', ()=>{ const v=location.hash.slice(1); if(v!==S.view && RENDER[v]) go(v); });
 function setTopbarH(){ document.documentElement.style.setProperty('--topbar-h', $('#topbar').offsetHeight+'px'); }
 window.addEventListener('resize', setTopbarH);
-UI.view = RENDER[location.hash.slice(1)] ? location.hash.slice(1) : 'queue';
-(async ()=>{ await poll(); setTopbarH(); })();
+setTopbarH();
+go(location.hash.slice(1) || 'queue');
 </script>
-
-</body>
-</html>
