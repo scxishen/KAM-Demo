@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KAM Email Assistant</title>
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>
+/* Layout: app shell. The left rail follows the KAM's day in order (1 Morning → 5 End of day), manager views sit below it; the main pane holds one view at a time. Yellow = flagged (quotation/incident/complaint), the product's own signal. */
+:root{
+  --bg:#f3f5f3; --surface:#ffffff; --surface-2:#eaeeeb; --ink:#1b2320; --muted:#5a6661; --line:#d9dfdb;
+  --accent:#1d6b63; --accent-ink:#ffffff; --accent-soft:#dcecea;
+  --hl:#fff1b0; --hl-ink:#6a5000; --hl-line:#e3c040;
+  --crit:#b42318; --crit-soft:#fbe6e3; --warn:#a85508; --warn-soft:#fbeedd; --good:#2b7a4b; --good-soft:#e0f1e6; --info:#3b5f8f; --info-soft:#e3ebf6;
+  --shadow:0 1px 2px rgba(20,35,30,.06),0 4px 16px rgba(20,35,30,.06);
+  --f-ui:system-ui,"PingFang SC","Noto Sans SC",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111514; --surface:#191e1d; --surface-2:#222927; --ink:#e4ebe7; --muted:#97a39e; --line:#2d3532;
+  --accent:#5db3a8; --accent-ink:#0d1716; --accent-soft:#1c3330;
+  --hl:#3a3112; --hl-ink:#f2d677; --hl-line:#8c7424;
+  --crit:#f08a7c; --crit-soft:#3a1c19; --warn:#efb25d; --warn-soft:#382a16; --good:#6fcd95; --good-soft:#173224; --info:#8fb3e6; --info-soft:#1c2738;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111514; --surface:#191e1d; --surface-2:#222927; --ink:#e4ebe7; --muted:#97a39e; --line:#2d3532;
+  --accent:#5db3a8; --accent-ink:#0d1716; --accent-soft:#1c3330;
+  --hl:#3a3112; --hl-ink:#f2d677; --hl-line:#8c7424;
+  --crit:#f08a7c; --crit-soft:#3a1c19; --warn:#efb25d; --warn-soft:#382a16; --good:#6fcd95; --good-soft:#173224; --info:#8fb3e6; --info-soft:#1c2738;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2,h3,h4{margin:0;text-wrap:balance;line-height:1.3}
+
+/* shell */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font-size:13px;font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:12px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.top-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--muted);font-size:12.5px}
+.top-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:8px;font-size:13px;line-height:1.3;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);background:var(--surface-2)}
+.btn.danger{color:var(--crit)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:3px 9px;font-size:12px}
+
+.shell{display:grid;grid-template-columns:240px minmax(0,1fr);align-items:start}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 53px);padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:12px;display:flex;flex-direction:column;gap:4px}
+.rail-h{font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin:4px 10px 6px}
+.rail-h + .rail-h{margin-top:0}
+.nav{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:2px 10px;text-align:left;padding:8px 10px;border-radius:9px;border:0;background:transparent;width:100%}
+.nav:hover{background:var(--surface-2)}
+.nav[aria-current="page"]{background:var(--surface);box-shadow:var(--shadow)}
+.nav .n{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:11.5px;font-weight:600;color:var(--muted)}
+.nav[aria-current="page"] .n{border-color:var(--accent);color:var(--accent)}
+.nav .t{font-weight:600;font-size:13.5px}
+.nav .w{grid-column:2;font-size:11.5px;color:var(--muted);margin-top:-2px}
+.nav .b{grid-row:1/span 2;grid-column:3;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--hl);color:var(--hl-ink);font-size:11.5px;font-weight:600;display:grid;place-items:center}
+.nav .now{font-size:10.5px;color:var(--accent);font-weight:600;margin-left:6px}
+.rail-sep{height:1px;background:var(--line);margin:12px 10px}
+.rail-note{font-size:11.5px;color:var(--muted);padding:8px 10px;line-height:1.5}
+
+main{padding-block:24px 48px;padding-right:max(16px,env(safe-area-inset-right,0px));padding-left:16px;min-width:0}
+.view{max-width:1040px;display:flex;flex-direction:column;gap:20px}
+.view-h{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-size:12px;letter-spacing:.06em;color:var(--accent);font-weight:600}
+.view-h h1{font-size:23px;font-weight:700}
+.lede{color:var(--muted);max-width:68ch}
+.section-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.section-h h2{font-size:16px}
+.section-h .sub{color:var(--muted);font-size:12.5px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.row-wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* category chips */
+.cat{display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap}
+.cat.crit{background:var(--crit-soft);color:var(--crit)}
+.cat.warn{background:var(--warn-soft);color:var(--warn)}
+.cat.hl{background:var(--hl);color:var(--hl-ink)}
+.cat.good{background:var(--good-soft);color:var(--good)}
+.cat.neutral{background:var(--surface-2);color:var(--ink)}
+.cat.mute{background:var(--surface-2);color:var(--muted)}
+.cat.info{background:var(--info-soft);color:var(--info)}
+.tier{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:5px;font-size:11.5px;font-weight:700;border:1.5px solid currentColor}
+.tier.A{color:var(--accent)} .tier.B{color:var(--info)} .tier.C{color:var(--muted)}
+.tag{font-size:11.5px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.risk{border-color:transparent;background:var(--crit-soft);color:var(--crit)}
+.tag.opp{border-color:transparent;background:var(--good-soft);color:var(--good)}
+.tag.item{border-color:transparent;background:var(--hl);color:var(--hl-ink)}
+
+/* summary strip */
+.strip{display:flex;flex-wrap:wrap;gap:8px}
+.strip .cat{font-weight:500}
+.strip .cat b{font-weight:700;margin-left:4px}
+
+/* mail cards */
+.mail{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.mail.is-hl{border-color:var(--hl-line)}
+.mail-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.mail.is-hl .mail-h{background:var(--hl);border-bottom-color:var(--hl-line)}
+.flag{font-size:11.5px;font-weight:700;color:var(--hl-ink);border:1.5px solid var(--hl-line);padding:0 6px;border-radius:5px;background:var(--surface)}
+.mail-h .cust{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.mail-h .meta{margin-left:auto;color:var(--muted);font-size:12px}
+.mail.is-hl .mail-h .meta{color:var(--hl-ink)}
+.mail-b{padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+.subj{font-weight:600;font-size:15px}
+.orig summary{cursor:pointer;color:var(--muted);font-size:12.5px;width:max-content}
+.orig .body{margin-top:8px;padding:10px 12px;border-radius:8px;background:var(--surface-2);font-size:13px;white-space:pre-wrap}
+.orig .from{color:var(--muted);font-size:12px;margin-top:6px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px}
+.box-h{font-size:12px;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.box-h span{font-weight:400;letter-spacing:0}
+dl.fields{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;font-size:13px}
+dl.fields dt{color:var(--muted);white-space:nowrap}
+dl.fields dd{margin:0;min-width:0}
+.low{background:var(--hl);border-radius:6px;padding:4px 6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.low input{flex:1 1 140px;min-width:0;font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--hl-line);border-radius:5px;background:var(--surface);color:var(--ink)}
+.low .why{width:100%;font-size:11.5px;color:var(--hl-ink)}
+.ok-mark{color:var(--good);font-size:12px;font-weight:600;margin-left:6px}
+.draft{border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.draft-tag{font-size:11.5px;color:var(--muted);padding:6px 10px;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.draft pre{margin:0;padding:10px 12px;white-space:pre-wrap;font-family:var(--f-ui);font-size:13px;line-height:1.6}
+.draft textarea{width:100%;min-height:220px;border:0;background:var(--surface);color:var(--ink);padding:10px 12px;font:inherit;font-size:13px;line-height:1.6;resize:vertical;border-radius:0 0 8px 8px}
+mark.ph{background:var(--hl);color:var(--hl-ink);border-radius:3px;padding:0 2px}
+.nodraft{font-size:13px;color:var(--muted);padding:12px;border:1px dashed var(--line);border-radius:8px}
+.rule{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--muted);background:var(--surface-2);padding:8px 10px;border-radius:8px}
+.rule b{color:var(--ink);font-weight:600}
+.rule .due{margin-left:auto;white-space:nowrap}
+.due.late{color:var(--crit);font-weight:600}
+.due.soon{color:var(--warn);font-weight:600}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.actions .spacer{flex:1}
+.reasons{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;padding:8px 10px;border-radius:8px;background:var(--crit-soft)}
+
+.done-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.done-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--line);font-size:13px}
+.done-row:first-child{border-top:0}
+.done-row .s{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.res{font-size:12px;font-weight:600;white-space:nowrap}
+.res.good{color:var(--good)} .res.mute{color:var(--muted)} .res.warn{color:var(--warn)}
+
+/* top10 */
+.rank{display:flex;flex-direction:column;gap:8px}
+.rk{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.rk.red{border-color:var(--crit)}
+.rk .no{font-family:var(--f-mono);font-size:20px;font-weight:500;color:var(--muted);text-align:center}
+.rk.red .no{color:var(--crit)}
+.rk .nm{display:flex;align-items:center;gap:8px;font-weight:600;flex-wrap:wrap}
+.rk .why{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.rk .act{font-size:13px;margin-top:6px}
+.rk .act::before{content:"Suggested · ";color:var(--muted)}
+.rk .btns{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.rk .ctl{display:flex;gap:4px;justify-content:flex-end}
+.rk.called{opacity:.75}
+.called-mark{color:var(--good);font-weight:600;font-size:12.5px}
+.redflag{font-size:11.5px;font-weight:700;color:var(--crit)}
+
+/* brief */
+.brief-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center}
+.clock{font-family:var(--f-mono);font-size:30px;font-weight:500;line-height:1}
+.clock small{display:block;font-family:var(--f-ui);font-size:12px;color:var(--muted);margin-top:6px;font-weight:400}
+.countdown{text-align:right;font-size:12.5px;color:var(--muted)}
+.countdown b{display:block;font-family:var(--f-mono);font-size:18px;color:var(--ink);font-weight:500}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+ol.list{padding-left:20px}
+.list li::marker{color:var(--muted)}
+.when{font-family:var(--f-mono);font-size:12px;color:var(--muted);margin-right:6px}
+.panel h3{font-size:14px;margin-bottom:10px}
+
+/* pipeline */
+.opps{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.opp{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px}
+.opp .src{font-size:12px;color:var(--muted)}
+.opp .nx{font-size:13px;background:var(--good-soft);color:var(--ink);padding:8px 10px;border-radius:8px}
+.opp .nx b{color:var(--good)}
+.opp.decided{opacity:.6}
+.board{display:grid;grid-template-columns:repeat(5,minmax(170px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}
+.col{background:var(--surface-2);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.col-h{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:6px}
+.card.fresh{border-color:var(--good)}
+.card .c{font-weight:600}
+.card select{font:inherit;font-size:12px;padding:2px 4px;border-radius:5px;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+.drafts{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.dr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 14px;border-top:1px solid var(--line)}
+.dr:first-child{border-top:0}
+.dr .s{font-size:12.5px;color:var(--muted)}
+
+/* metrics */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.kpis.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:560px){.kpis.three{grid-template-columns:minmax(0,1fr)}}
+.kpi .l{font-size:12.5px;color:var(--muted)}
+.kpi .v{font-family:var(--f-mono);font-size:28px;font-weight:500;line-height:1.2;margin-top:4px}
+.kpi .d{font-size:12px;color:var(--muted);margin-top:4px}
+.kpi.crit .v{color:var(--crit)} .kpi.hl .v{color:var(--hl-ink)} .kpi.good .v{color:var(--good)}
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar-row{display:grid;grid-template-columns:64px minmax(0,1fr) 28px;gap:10px;align-items:center;font-size:13px}
+.bar{display:flex;height:16px;border-radius:4px;overflow:hidden;background:var(--surface-2)}
+.bar span{display:block;height:100%}
+.seg-p{background:var(--hl-line)} .seg-a{background:var(--accent)} .seg-w{background:var(--info)} .seg-c{background:var(--good)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:9px 12px;border-top:1px solid var(--line);vertical-align:top}
+thead th{border-top:0;font-size:12px;color:var(--muted);font-weight:600;background:var(--surface-2);white-space:nowrap}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.trend-up{color:var(--good);font-weight:600} .trend-down{color:var(--crit);font-weight:600} .trend-flat{color:var(--muted)}
+.late-list{display:flex;flex-direction:column;gap:8px}
+.late-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13px;padding:8px 10px;border-radius:8px;background:var(--surface-2)}
+.late-item.is-late{background:var(--crit-soft)}
+.chart svg{width:100%;height:auto;display:block}
+.note{font-size:12px;color:var(--muted)}
+.summary-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.timeline{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.timeline div{display:grid;grid-template-columns:48px minmax(0,1fr);gap:8px}
+.empty{color:var(--muted);font-size:13px;padding:6px 0}
+.report-meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12.5px;color:var(--muted)}
+
+.fwd{display:flex;flex-direction:column;gap:10px}
+.fwd-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.fwd-form{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 12px;align-items:start}
+.fwd-form label{padding-top:6px;font-weight:600;font-size:13px}
+.fwd-form select,.fwd-form textarea{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);width:100%}
+.fwd-form .actions{grid-column:1/-1}
+.fwd-sent{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--line);padding-top:8px}
+@media (max-width:560px){.fwd-form{grid-template-columns:minmax(0,1fr)}.fwd-form label{padding-top:0}}
+.gm{font-size:12px;color:var(--muted)} .gm b{color:var(--ink);font-weight:600}
+.lbl{font-family:var(--f-mono);font-size:11.5px;background:var(--surface-2);color:var(--ink);padding:0 6px;border-radius:4px;white-space:nowrap}
+.syncpop{position:fixed;z-index:35;top:calc(env(safe-area-inset-top,0px) + var(--topbar-h,56px) + 6px);right:max(16px,env(safe-area-inset-right,0px));width:min(340px,calc(100% - 32px));background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px}
+.syncform{display:flex;flex-direction:column;gap:10px}
+.synclbl{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+.synclbl input{font:inherit;font-size:14px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);width:max-content}
+.syncerr{font-size:12.5px;color:var(--crit);background:var(--crit-soft);padding:6px 8px;border-radius:6px}
+.syncwarn{font-size:12.5px;color:var(--warn);background:var(--warn-soft);padding:6px 8px;border-radius:6px}
+.demo-jump{align-self:flex-start;border-top:1px dashed var(--line);border-radius:0;padding-top:8px;width:100%;justify-content:flex-start}
+/* compliance footer */
+.trust{border-top:1px solid var(--line);background:var(--surface);padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted)}
+.trust b{color:var(--ink);font-weight:600}
+
+/* drawer */
+.drawer{position:fixed;inset:0;z-index:40}
+.scrim{position:absolute;inset:0;background:rgba(10,20,18,.38);border:0;width:100%;cursor:default}
+.drawer-panel{position:absolute;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--bg);border-left:1px solid var(--line);overflow-y:auto;
+  padding-top:calc(env(safe-area-inset-top,0px) + 18px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px);padding-left:20px;padding-right:max(20px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+.drawer-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.drawer-top h2{font-size:18px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);z-index:50;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+
+@media (max-width:900px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .two,.grid2{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:820px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--topbar-h,96px));z-index:15;flex-direction:row;overflow-x:auto;background:var(--bg);border-bottom:1px solid var(--line);padding-block:8px;padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .rail-h,.rail-sep,.rail-note{display:none}
+  .nav{width:auto;flex:0 0 auto;grid-template-columns:22px auto auto;padding:6px 10px}
+  .nav .w{display:none}
+  .nav .b{grid-row:1;grid-column:3}
+  main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-top:18px}
+  .top-actions{margin-left:0}
+  .summary-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:560px){
+  .rk{grid-template-columns:28px minmax(0,1fr)}
+  .rk .btns{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
+  .done-row{grid-template-columns:auto minmax(0,1fr);}
+  .done-row .res,.done-row .btn{grid-column:2}
+  .brief-head{grid-template-columns:minmax(0,1fr)}
+  .countdown{text-align:left}
+  .dr{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:no-preference){
+  .mail,.rk,.opp{transition:border-color .2s}
+  .toast{animation:pop .2s ease-out}
+  @keyframes pop{from{transform:translate(-50%,8px);opacity:0}}
+}
+
+.banner{background:var(--crit-soft);color:var(--crit);font-size:13px;font-weight:500;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line)}
+.warnchip{background:var(--warn-soft);color:var(--warn)}
+.runchip{background:var(--accent-soft);color:var(--accent);font-weight:600}
+select.assign{font:inherit;font-size:12px;padding:2px 6px;border:1px dashed var(--hl-line);border-radius:6px;background:var(--surface);color:var(--ink);max-width:100%}
+.briefform{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end}
+.briefform label,.report-day{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);font-weight:600}
+.briefform select,.briefform input,.report-day select{font:inherit;font-size:14px;font-weight:400;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.report-day{max-width:260px;margin-top:6px}
+.briefform .actions{grid-column:1/-1}
+.phwarn{color:var(--hl-ink);background:var(--hl);padding:0 4px;border-radius:3px}
+.seg-l{background:var(--muted)}
+.tbl-wrap th[scope],.tbl-wrap tbody th{width:240px;color:var(--muted);font-weight:600;font-size:12.5px;white-space:normal}
+@media (max-width:560px){.briefform{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar">
+  <div class="brand"><div class="brand-mark" aria-hidden="true">K</div>KAM Email Assistant</div>
+  <div class="top-meta" id="topMeta"></div>
+  <div class="top-actions">
+    <button type="button" class="btn" data-act="syncOpen" id="syncBtn" aria-expanded="false" aria-controls="syncpop">Set next sync</button>
+  </div>
+</header>
+<div class="banner" id="banner" hidden></div>
+
+<div class="shell">
+  <nav class="rail" id="rail" aria-label="Pages"></nav>
+  <main id="main"><div class="view"><p class="lede">Loading…</p></div></main>
+</div>
+
+<footer class="trust">
+  <span>Runs on this Mac</span><span>Reads Gmail, files into labels, marks flagged emails read</span><span>Writes drafts only, <b>never sends or deletes</b></span><span>Email bodies <b>not stored</b></span><span>Local model via <b>Ollama</b></span>
+</footer>
+
+<aside class="drawer" id="drawer" hidden>
+  <button type="button" class="scrim" data-act="close" aria-label="Close"></button>
+  <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drTitle" id="drawerPanel"></div>
+</aside>
+<div class="syncpop" id="syncpop" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const TOKEN = '__KAM_TOKEN__';
+const C_INC='Incident', C_CMP='Complaint', C_QUO='Quotation request', C_ORD='Order', C_GEN='General enquiry', C_LOG='Logistics & payment', C_OPP='Opportunity signal', C_INT='Internal / no action';
+const CAT_CLS = {[C_INC]:'crit',[C_CMP]:'warn',[C_QUO]:'hl',[C_ORD]:'neutral',[C_GEN]:'neutral',[C_LOG]:'neutral',[C_OPP]:'good',[C_INT]:'mute'};
+const IMP_ORDER = {[C_INC]:0,[C_CMP]:1,[C_QUO]:2};
+const ST_P='To confirm', ST_A='In progress', ST_W='Waiting for customer', ST_C='Closed';
+const STAGES = ['New','Following up','Quoted','Won','Lost'];
+const TONE_TXT = {up:'↑ Improving',down:'↓ Worsening',flat:'→ Stable'};
+const IT_INC='Open incident', IT_CMP='Open complaint', IT_QUO='Quotation pending', IT_REP='Email awaiting reply';
+const AI_MARK = 'AI-generated draft – check before sending';
+
+let ST = null;
+const UI = {view:'queue', editing:null, rejecting:null, expanded:{}, drawer:null, syncOpen:false, orig:{}, busy:null, briefCid:'', briefTopic:'', reportDay:null};
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const plural = (n,w) => `${n} ${w}${n===1?'':'s'}`;
+const uniq = a => [...new Set(a)];
+const pad = n => String(n).padStart(2,'0');
+const dkey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const hm = iso => { const d=new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+function dayLabel(iso){
+  const d=new Date(iso), t=new Date(), y=new Date(); y.setDate(t.getDate()-1);
+  if (dkey(d)===dkey(t)) return 'Today'; if (dkey(d)===dkey(y)) return 'Yesterday';
+  if (d-t > 0 && d-t < 2*864e5) return 'Tomorrow';
+  return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+}
+const whenTxt = iso => iso ? `${dayLabel(iso)} ${hm(iso)}` : '—';
+const custOf = id => ST.customers.find(c=>c.id===id) || null;
+const custName = e => { const c=custOf(e.customer_id); return c ? c.short : (e.category===C_INT ? 'Internal' : e.from_name); };
+const tierBadge = c => c ? `<span class="tier ${c.tier}" title="Tier ${c.tier}">${c.tier}</span>` : '';
+const catChip = c => `<span class="cat ${CAT_CLS[c]||'neutral'}">${esc(c)}</span>`;
+const shortCat = c => c===C_QUO ? 'Quotation' : c;
+const isImp = e => e.category in IMP_ORDER;
+const isOpen = e => e.status==='pending';
+const lowIdx = e => e.fields.map((f,i)=>f[2]?i:-1).filter(i=>i>=0);
+const needsConfirm = e => lowIdx(e).some(i=>!e.confirmed.includes(i));
+const draftOf = e => e.draft_edited || e.draft;
+const hasPh = t => /\[KAM to fill in[^\]]*\]|【[^】]*】/.test(t||'');
+const phHTML = t => esc(t).replace(/(\[KAM to fill in[^\]]*\]|【[^】]*】)/g,'<mark class="ph">$1</mark>');
+const daysAgo = n => Date.now() - n*864e5;
+function impState(e){ if (isOpen(e)) return ST_P; if (e.sent) return ST_W; if (e.status==='noaction') return ST_C; return ST_A; }
+function deadline(e){
+  const p = new Date(e.processed);
+  if (e.category===C_INC) return {at:new Date(+p+2*36e5), txt:'escalate if unhandled after 2 hours'};
+  if (e.category===C_CMP){ const d=new Date(p); d.setHours(17,30,0,0); return {at: d>p?d:new Date(+p+2*36e5), txt:'first reply due today by 17:30'}; }
+  if (e.category===C_QUO){ const s=new Date(p); s.setHours(8,0,0,0); return {at:new Date(Math.max(+p,+s)+36e5), txt:'reminder within 1 working hour'}; }
+  return null;
+}
+function dueTag(e){
+  const d = deadline(e); if(!d) return '';
+  const left = Math.round((d.at - Date.now())/6e4);
+  const cls = left<0 ? 'late' : left<=60 ? 'soon' : '';
+  const h=Math.floor(Math.abs(left)/60), m=Math.abs(left)%60;
+  const span = `${h?h+' h ':''}${m} min`;
+  return `<span class="due mono ${cls}">${left<0?`Overdue by ${span}`:`By ${hm(d.at)} (${span} left)`}</span>`;
+}
+function toast(msg){ if(!msg) return; const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>{t.hidden=true},4200); }
+
+/* ---------- server ---------- */
+async function api(path, body){
+  const r = await fetch(path, {method: body?'POST':'GET', headers:{'X-KAM-Token':TOKEN,'Content-Type':'application/json'}, body: body?JSON.stringify(body):undefined});
+  let j = {}; try { j = await r.json(); } catch(_) {}
+  if (j.state) ST = j.state;
+  if (!r.ok || j.ok===false) throw new Error(j.error || `Request failed (${r.status})`);
+  return j;
+}
+async function act(body){
+  UI.busy = body.act + (body.cid||body.id||'');
+  render();
+  try { const j = await api('/api/action', body); toast(j.message); return true; }
+  catch(e){ toast(e.message); return false; }
+  finally { UI.busy=null; render(); }
+}
+function typing(){ const a=document.activeElement; return UI.editing || UI.syncOpen || (a && ['INPUT','TEXTAREA','SELECT'].includes(a.tagName)); }
+async function poll(){
+  try { await api('/api/state'); $('#banner').hidden = true; if (typing()) renderTop(); else render(); }
+  catch(e){ const b=$('#banner'); b.textContent = /reload/i.test(e.message) ? 'The app was restarted. Reload this page.' : 'Cannot reach the app. Is it still running in the Terminal window?'; b.hidden=false; }
+  setTimeout(poll, ST && ST.sync.running ? 3000 : 30000);
+}
+
+/* ---------- customer signals & Top 10 ---------- */
+function custEmails(cid, days){ const since=daysAgo(days); return ST.emails.filter(e=>e.customer_id===cid && new Date(e.received)>=since); }
+function signals(cid){
+  const es = custEmails(cid, 30), items = new Set();
+  es.forEach(e=>{
+    if (e.category===C_INT || e.category===C_LOG) return;
+    if (isImp(e) && !e.sent && e.status!=='noaction') items.add(e.category===C_INC?IT_INC:e.category===C_CMP?IT_CMP:IT_QUO);
+    else if (isOpen(e) && e.needs_reply) items.add(IT_REP);
+  });
+  const recent = custEmails(cid, 14);
+  const overdue = es.some(e=>isOpen(e) && !isImp(e) && e.needs_reply && Date.now()-new Date(e.received) > 864e5) ? 'Email unanswered for over a day' : null;
+  return {items:[...items], risk:uniq(recent.flatMap(e=>e.risk)).slice(0,3), opp:uniq(recent.flatMap(e=>e.opp)).slice(0,3), overdue};
+}
+function score(c){
+  const s = signals(c.id); let v = {A:30,B:18,C:8}[c.tier]||8;
+  s.items.forEach(i=>{ v += i===IT_INC?25 : i===IT_CMP?20 : i===IT_QUO?12 : 6; });
+  return v + s.risk.length*8 + s.opp.length*5 + (s.overdue?15:0) + (c.manual||0);
+}
+function action(c){
+  const card = ST.cards[c.id] && ST.cards[c.id].card;
+  const s = signals(c.id);
+  if (s.items.includes(IT_INC)) return 'Call about the open incident and agree the next update';
+  if (s.items.includes(IT_CMP)) return 'Give the first reply to the complaint today';
+  if (card && card.next_steps && card.next_steps[0]) return card.next_steps[0].step;
+  if (s.overdue) return 'Answer the email that has been waiting over a day';
+  if (s.items.includes(IT_QUO)) return 'Send the quotation at the promised time';
+  if (s.risk.length) return 'Call to check on the relationship';
+  if (s.opp.length) return 'Follow up on the opportunity';
+  if (s.items.includes(IT_REP)) return 'Answer the waiting email';
+  return 'Nothing open; keep routine contact';
+}
+const riskUp = c => c.tier==='A' && signals(c.id).risk.length>0;
+function top10(){ return ST.customers.filter(c=>custEmails(c.id,30).length || c.manual).sort((a,b)=>score(b)-score(a)).slice(0,10); }
+function calledToday(cid){ const t=dkey(new Date()); const c=ST.calls.filter(x=>x.customer_id===cid && dkey(new Date(x.ts))===t).pop(); return c ? hm(c.ts) : null; }
+function tone(cid){
+  const score = e => ({dissatisfied:2,pressing:1}[e.sentiment]||0);
+  const a = custEmails(cid,7), b = custEmails(cid,14).filter(e=>new Date(e.received)<daysAgo(7));
+  if (!a.length || !b.length) return 'flat';
+  const x = a.reduce((s,e)=>s+score(e),0)/a.length, y = b.reduce((s,e)=>s+score(e),0)/b.length;
+  return x < y-0.3 ? 'up' : x > y+0.3 ? 'down' : 'flat';
+}
+
+/* ---------- top bar & rail ---------- */
+const VIEWS = [
+  {id:'queue',n:'1',when:'Morning',label:'Review queue'},
+  {id:'top10',n:'2',when:'Late morning',label:'Top 10 customers'},
+  {id:'brief',n:'3',when:'Before meetings',label:'Pre-meeting brief'},
+  {id:'pipeline',n:'4',when:'Afternoon',label:'Opportunities & drafts'},
+  {id:'evening',n:'5',when:'End of day',label:'Daily summary'},
+];
+const MORE = [{id:'dashboard',label:'Dashboard',w:'Live'},{id:'report',label:'Daily report',w:'Any past day'},{id:'settings',label:'Settings',w:'Customers, modes'}];
+function nowStep(){ const h=new Date().getHours(); return h<10?'queue':h<12?'top10':h<14?'brief':h<17?'pipeline':'evening'; }
+function syncText(){
+  const s=ST.sync; if (s.running) return `Syncing… ${s.message||''}`;
+  return `Gmail sync · last ${s.last?whenTxt(s.last):'never'} · next ${s.next?whenTxt(s.next):'—'}${s.manual?' (set manually)':` (daily ${ST.daily_sync_time})`}`;
+}
+function renderTop(){
+  const m = ST.modes, chips = [];
+  if (ST.sample) chips.push('<span class="chip warnchip">Sample data · no mailbox</span>');
+  chips.push(`<span class="chip">Gmail · ${esc(ST.mailbox)}</span>`);
+  if (!ST.sample && !m.gmail_changes) chips.push('<span class="chip warnchip" title="gmail_changes is off in config.json">Shadow mode · Gmail unchanged</span>');
+  if (!ST.sample && !m.drafts) chips.push('<span class="chip warnchip" title="generate_drafts is off in config.json">Drafts off</span>');
+  chips.push(`<span class="chip ${ST.sync.running?'runchip':''}" id="sync">${esc(syncText())}</span>`);
+  $('#topMeta').innerHTML = chips.join('');
+  const b=$('#banner');
+  if (ST.sync.error){ b.textContent = 'Last sync failed: ' + ST.sync.error; b.hidden=false; } else if (!b.textContent.startsWith('Cannot')) b.hidden=true;
+  const pop=$('#syncpop'); pop.hidden=!UI.syncOpen; $('#syncBtn').setAttribute('aria-expanded', UI.syncOpen?'true':'false');
+  if (UI.syncOpen && !pop.contains(document.activeElement)) pop.innerHTML = syncPopHTML();
+}
+function renderRail(){
+  const pend = ST.emails.filter(isOpen).length, newOpps = ST.opps.filter(o=>!o.decision).length;
+  const badge = {queue:pend, pipeline:newOpps}, ns = nowStep();
+  const item = (v,n,w) => `<button type="button" class="nav" data-go="${v.id}" ${UI.view===v.id?'aria-current="page"':''}>
+      <span class="n">${n}</span><span class="t">${v.label}${ns===v.id?'<span class="now">Now</span>':''}</span>
+      ${badge[v.id]?`<span class="b">${badge[v.id]}</span>`:''}<span class="w">${w}</span></button>`;
+  $('#rail').innerHTML = `<div class="rail-h">Your day</div>` + VIEWS.map(v=>item(v,v.n,v.when)).join('') +
+    `<div class="rail-sep"></div><div class="rail-h">Overview</div>` + MORE.map(v=>item(v,v.id==='dashboard'?'◷':v.id==='report'?'≡':'⚙',v.w)).join('');
+}
+function syncPopHTML(){
+  const s = ST.sync;
+  return `<form id="syncForm" class="syncform">
+    <div><b>Next mailbox sync</b><div class="note">Last ${s.last?whenTxt(s.last):'never'} · next ${s.next?whenTxt(s.next):'—'}</div></div>
+    <p class="note" style="margin:0">Without a manual time, the mailbox syncs only once a day, at ${ST.daily_sync_time} (Central European Time).</p>
+    <div class="row-wrap"><button type="button" class="btn sm primary" data-act="syncQuick" data-m="now">Sync now</button><button type="button" class="btn sm" data-act="syncQuick" data-m="15">In 15 min</button><button type="button" class="btn sm" data-act="syncQuick" data-m="60">In 1 hour</button></div>
+    <label class="synclbl" for="syncTime">Or pick a time today<input type="time" id="syncTime" step="300" value="${s.manual&&s.next?hm(s.next):hm(new Date().toISOString())}"></label>
+    ${!s.manual?`<div class="syncwarn">The next automatic sync is ${s.next?whenTxt(s.next):'tomorrow'}. New emails, including incidents, wait until then unless you set a sync.</div>`:''}
+    <div class="actions"><button type="submit" class="btn primary sm">Save</button><button type="button" class="btn ghost sm" data-act="syncClose">Cancel</button></div>
+    <p class="note" style="margin:0">After this sync, the app goes back to the daily ${ST.daily_sync_time} sync. A first sync of many emails can take a while: each email goes through the local model.</p>
+  </form>`;
+}
+
+/* ---------- 1 review queue ---------- */
+function assignSelect(e){
+  if (e.customer_id || e.category===C_INT || !ST.customers.length) return '';
+  return `<select class="assign" data-act="assign" data-id="${e.id}" aria-label="Assign to customer"><option value="">Assign ${esc(e.from_addr.split('@')[1])} to…</option>${ST.customers.map(c=>`<option value="${c.id}">${esc(c.short)} (${c.tier})</option>`).join('')}</select>`;
+}
+function gmailLine(e){
+  const read = e.marked_read ? '<b>marked read</b>' : isImp(e) ? 'not marked read' : '<b>left unread</b>';
+  const lbl = e.label_applied ? `filed in <span class="lbl">${esc(e.label)}</span>` : `not labelled${ST.sample?'':' (shadow mode)'}`;
+  return `<div class="gm">Gmail: ${read} · ${lbl}</div>`;
+}
+function origBlock(e){
+  const o = UI.orig[e.id];
+  if (!o) return `<button type="button" class="btn ghost sm" data-act="orig" data-id="${e.id}">Show original email</button>`;
+  if (o.loading) return '<div class="note">Loading the email from Gmail…</div>';
+  if (o.error) return `<div class="syncerr">${esc(o.error)}</div>`;
+  return `<div class="orig"><div class="body">${esc(o.text)}</div><div class="from">${esc(e.from_name)} &lt;${esc(e.from_addr)}&gt;${e.attachments.length?' · attachments: '+esc(e.attachments.join(', ')):''}</div>
+    <button type="button" class="btn ghost sm" data-act="origHide" data-id="${e.id}">Hide original</button></div>`;
+}
+function mailCard(e){
+  const imp = isImp(e), c = custOf(e.customer_id);
+  const fields = e.fields.map((f,i)=>{
+    if (f[2] && !e.confirmed.includes(i)) return `<dt>${esc(f[0])}</dt><dd><div class="low"><input id="lf-${e.id}-${i}" value="${esc(f[1])}" aria-label="${esc(f[0])}">
+      <button type="button" class="btn sm" data-act="confirm" data-id="${e.id}" data-i="${i}">Confirm</button><span class="why">Low confidence – please check</span></div></dd>`;
+    return `<dt>${esc(f[0])}</dt><dd>${esc(f[1])}${f[2]?'<span class="ok-mark">✓ Checked</span>':''}</dd>`;
+  }).join('');
+  let draft;
+  if (!e.draft) draft = `<div class="nodraft">${e.needs_reply ? (ST.modes.drafts?'No draft was written for this email.':'Drafts are off in config.json.') : 'No reply needed.'}</div>`;
+  else if (UI.editing===e.id) draft = `<div class="draft"><div class="draft-tag"><span>${AI_MARK}</span><span>Editing</span></div><textarea id="ta-${e.id}" aria-label="Edit draft">${esc(draftOf(e))}</textarea></div>`;
+  else draft = `<div class="draft"><div class="draft-tag"><span>${AI_MARK}</span><span>${esc(e.lang)} · goes to Gmail drafts as a reply when you adopt it</span></div><pre>${phHTML(draftOf(e))}</pre></div>`;
+  const blocked = needsConfirm(e), busy = UI.busy==='adopt'+e.id || UI.busy==='saveEdit'+e.id;
+  let acts;
+  if (UI.editing===e.id) acts = `<button type="button" class="btn primary" data-act="saveEdit" data-id="${e.id}" ${busy?'disabled':''}>Save edits and adopt</button><button type="button" class="btn ghost" data-act="cancelEdit">Cancel</button>`;
+  else if (UI.rejecting===e.id) acts = `<div class="reasons"><b>Reason:</b>${['Inaccurate','Wrong tone','No reply needed',"I'll write it myself"].map(r=>`<button type="button" class="btn sm" data-act="rejectWhy" data-id="${e.id}" data-r="${esc(r)}">${esc(r)}</button>`).join('')}<button type="button" class="btn sm ghost" data-act="cancelReject">Cancel</button></div>`;
+  else if (!e.draft) acts = `<button type="button" class="btn primary" data-act="noaction" data-id="${e.id}" ${blocked?'disabled':''}>${e.needs_reply?'I will reply myself':'Confirm'}</button>${blocked?'<span class="note">Check the yellow fields first</span>':''}`;
+  else acts = `<button type="button" class="btn primary" data-act="adopt" data-id="${e.id}" ${blocked||busy?'disabled':''}>${busy?'Saving…':'Adopt draft'}</button>
+      <button type="button" class="btn" data-act="edit" data-id="${e.id}" ${blocked?'disabled':''}>Edit</button>
+      <button type="button" class="btn danger" data-act="reject" data-id="${e.id}">Reject</button>
+      ${blocked?'<span class="note">Check the yellow fields first</span>':''}<span class="spacer"></span>
+      <button type="button" class="btn ghost sm" data-act="noaction" data-id="${e.id}">No action</button>`;
+  if (!imp && UI.expanded[e.id]) acts += `<button type="button" class="btn ghost sm" data-act="expand" data-id="${e.id}">Show subject only</button>`;
+  return `<article class="mail ${imp?'is-hl':''}" id="m-${e.id}">
+    <header class="mail-h">${imp?'<span class="flag">Flagged</span>':''}${catChip(e.category)}
+      ${e.risk.map(t=>`<span class="tag risk">${esc(t)}</span>`).join('')}${e.opp.map(t=>`<span class="tag opp">${esc(t)}</span>`).join('')}
+      <span class="cust">${esc(custName(e))} ${tierBadge(c)}</span>${assignSelect(e)}
+      <span class="meta mono">${whenTxt(e.received)} · ${esc(e.lang)} · confidence ${Number(e.conf).toFixed(2)}</span></header>
+    <div class="mail-b">
+      <div class="subj">${esc(e.subject)}</div>
+      <div class="note">${esc(e.summary)}</div>
+      ${gmailLine(e)}
+      ${origBlock(e)}
+      <div class="two">
+        <section><div class="box-h">Extracted requirements</div><dl class="fields">${fields}</dl></section>
+        <section><div class="box-h">Reply draft</div>${draft}</section>
+      </div>
+      ${imp?`<div class="rule"><span><b>Reminders & follow-up</b> · ${deadline(e).txt}</span>${dueTag(e)}</div>`:''}
+      <div class="actions">${acts}</div>
+    </div></article>`;
+}
+const RES = {adopted:['Adopted','good'],edited:['Edited & adopted','good'],rejected:['Rejected','mute'],noaction:['No action','mute'],replied:['You replied in Gmail','good']};
+function vQueue(){
+  const open = ST.emails.filter(isOpen).sort((a,b)=>{ const ia=isImp(a)?IMP_ORDER[a.category]:9, ib=isImp(b)?IMP_ORDER[b.category]:9; return ia-ib || new Date(b.received)-new Date(a.received); });
+  const flagged = open.filter(isImp), other = open.filter(e=>!isImp(e));
+  const done = ST.emails.filter(e=>!isOpen(e) && new Date(e.processed)>=daysAgo(2)).slice(0,40);
+  const last = ST.sync.last, fresh = last ? ST.emails.filter(e=>e.processed>=last).length : 0;
+  const labels = {}; ST.emails.filter(e=>new Date(e.processed)>=daysAgo(7)).forEach(e=>{ const l=e.label; labels[l]=labels[l]||{n:0,c:e.category}; labels[l].n++; });
+  const batch = other.filter(e=>e.conf>=.9 && !lowIdx(e).length);
+  const row = e => UI.expanded[e.id] ? mailCard(e) : `<div class="done-row">${catChip(e.category)}<span class="s"><b>${esc(custName(e))}</b> · ${esc(e.subject)}</span>
+      <span class="res mute mono">${whenTxt(e.received)}${isImp(e)?'':' · unread in Gmail'}</span><button type="button" class="btn ghost sm" data-act="expand" data-id="${e.id}">Details</button></div>`;
+  const hello = ST.kam_name ? `, ${esc(ST.kam_name)}` : '';
+  const h = new Date().getHours(), greet = h<12?'Good morning':h<18?'Good afternoon':'Good evening';
+  return `<div class="view">
+    <div class="view-h"><div class="eyebrow">1 · Morning</div><h1>${greet}${hello}</h1>
+      <p class="lede">${last?`The last sync (${whenTxt(last)}) processed ${plural(fresh,'email')}.`:'No sync yet. Use “Set next sync → Sync now” at the top to read your mailbox for the first time.'} ${flagged.length?`<b>${plural(flagged.length,'flagged email')}</b> ${flagged.length===1?'is':'are'} waiting for you.`:'No flagged emails are waiting.'}</p></div>
+    ${ST.reminders.length?`<div class="panel"><h3>Today's reminders</h3><ul class="list">${ST.reminders.map(r=>`<li><span class="when">${esc(r[0])}</span>${esc(r[1])}</li>`).join('')}</ul></div>`:''}
+    ${Object.keys(labels).length?`<div><div class="box-h">Gmail labels · last 7 days</div><div class="strip">${Object.entries(labels).map(([l,v])=>`<span class="cat ${CAT_CLS[v.c]}"><span class="mono" style="font-weight:500">${esc(l)}</span><b>${v.n}</b></span>`).join('')}</div></div>`:''}
+    <div class="section-h"><h2>Flagged · ${flagged.length}</h2><span class="sub">Quotations, incidents, complaints · marked read in Gmail</span></div>
+    ${flagged.length?flagged.map(mailCard).join(''):'<div class="panel empty">No flagged emails waiting. Next: the Top 10 customers. <button type="button" class="btn sm primary" data-go="top10">Open Top 10</button></div>'}
+    <div class="section-h"><h2>Other emails · ${other.length}</h2><span class="sub">Subject only · still unread in Gmail</span>
+      ${batch.length?`<button type="button" class="btn" data-act="batch">Confirm low-risk items (${batch.length})</button>`:''}</div>
+    ${other.filter(e=>UI.expanded[e.id]).map(row).join('')}
+    ${other.filter(e=>!UI.expanded[e.id]).length?`<div class="done-list">${other.filter(e=>!UI.expanded[e.id]).map(row).join('')}</div>`:(other.length?'':'<div class="panel empty">No other emails waiting.</div>')}
+    ${done.length?`<div class="section-h"><h2>Handled · last 2 days</h2><span class="sub">Undo works until a draft is in Gmail</span></div>
+      <div class="done-list">${done.map(e=>`<div class="done-row">${catChip(e.category)}<span class="s"><b>${esc(custName(e))}</b> · ${esc(e.subject)}</span>
+        <span class="res ${(RES[e.status]||['','mute'])[1]}">${(RES[e.status]||[e.status])[0]}${e.reason?' ('+esc(e.reason)+')':''}${e.draft_saved?' · in Gmail drafts':''}${e.sent&&e.status!=='replied'?' · sent':''}</span>
+        ${e.draft_saved||e.status==='replied'?'<span></span>':`<button type="button" class="btn ghost sm" data-act="undo" data-id="${e.id}">Undo</button>`}</div>`).join('')}</div>`:''}
+  </div>`;
+}
+
+/* ---------- 2 top 10 ---------- */
+function vTop10(){
+  const list = top10();
+  if (!ST.customers.length) return `<div class="view"><div class="view-h"><div class="eyebrow">2 · Late morning</div><h1>Top 10 priority customers</h1></div><div class="panel empty">No customers yet. Fill in customers.csv and reload it under Settings.</div></div>`;
+  return `<div class="view">
+    <div class="view-h"><div class="eyebrow">2 · Late morning</div><h1>Top 10 priority customers</h1>
+      <p class="lede">Ranked by customer tier, open important items, waiting time, and risk and opportunity signals in the last 14 days of email. A customers with rising risk are marked red.</p></div>
+    ${list.length?`<div class="rank">${list.map((c,i)=>{
+      const s = signals(c.id), red = riskUp(c), called = calledToday(c.id);
+      const why = [`<span class="tag">Tier ${c.tier}</span>`, ...s.items.map(x=>`<span class="tag item">${x}</span>`), s.overdue?`<span class="tag risk">${s.overdue}</span>`:'',
+        ...s.risk.map(x=>`<span class="tag risk">${esc(x)}</span>`), ...s.opp.map(x=>`<span class="tag opp">${esc(x)}</span>`)].join('');
+      return `<div class="rk ${red?'red':''} ${called?'called':''}"><div class="no">${i+1}</div>
+        <div><div class="nm">${esc(c.name)} ${tierBadge(c)}${red?'<span class="redflag">Risk rising</span>':''}${c.manual>0?'<span class="tag">Pinned</span>':''}</div>
+          <div class="why">${why}</div><div class="act">${esc(action(c))}</div></div>
+        <div class="btns"><button type="button" class="btn sm ${red?'primary':''}" data-act="card" data-c="${c.id}">Strategy card</button>
+          ${called?`<span class="called-mark">✓ Called ${called}</span>`:`<button type="button" class="btn sm" data-act="call" data-c="${c.id}">Called</button>`}
+          <div class="ctl"><button type="button" class="btn ghost sm" data-act="pin" data-c="${c.id}">Pin</button><button type="button" class="btn ghost sm" data-act="down" data-c="${c.id}">Demote</button></div></div></div>`;}).join('')}</div>`
+      :'<div class="panel empty">No customer emails in the last 30 days yet.</div>'}
+  </div>`;
+}
+function listOrEmpty(a, empty){ return a && a.length ? `<ul class="list">${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>` : `<p class="empty">${empty}</p>`; }
+function cardHTML(cid){
+  const c = custOf(cid), s = signals(cid), k = ST.cards[cid] && ST.cards[cid].card, busy = UI.busy==='card'+cid;
+  const open = ST.emails.filter(e=>e.customer_id===cid && isImp(e) && !e.sent && e.status!=='noaction');
+  return `<div class="drawer-top"><div><div class="eyebrow">Customer strategy card</div><h2 id="drTitle">${esc(c.name)}</h2>
+      <div class="row-wrap" style="margin-top:6px">${tierBadge(c)}<span class="note">${esc(c.domains.join(', '))}</span>${riskUp(c)?'<span class="redflag">Risk rising</span>':''}</div></div>
+      <button type="button" class="btn ghost" data-act="close">Close</button></div>
+    <div class="panel"><h3>Open items from email</h3>${open.length?`<ul class="list">${open.map(e=>`<li>${catChip(e.category)} ${esc(e.subject)} <span class="note">· ${impState(e)}</span></li>`).join('')}</ul>`:'<p class="empty">No open important items.</p>'}
+      ${s.overdue?`<p class="note" style="color:var(--crit);margin:8px 0 0">${s.overdue}</p>`:''}
+      <div class="row-wrap" style="margin-top:8px">${s.risk.map(x=>`<span class="tag risk">${esc(x)}</span>`).join('')}${s.opp.map(x=>`<span class="tag opp">${esc(x)}</span>`).join('')}</div></div>
+    ${k?`<div class="panel"><h3>Overview</h3><p style="margin:0">${esc(k.overview)}</p><p class="note" style="margin:8px 0 0">Contacts: ${esc(c.contacts||'—')}</p></div>
+      <div class="panel"><h3>Suggested next steps</h3>${k.next_steps&&k.next_steps.length?`<ol class="list">${k.next_steps.map(n=>`<li><b>${esc(n.step)}</b><div class="note">Why: ${esc(n.why)}</div></li>`).join('')}</ol>`:'<p class="empty">None.</p>'}</div>
+      <div class="panel"><h3>Talking points</h3>${listOrEmpty(k.talking_points,'None.')}</div>
+      <p class="note">Generated ${whenTxt(k.created)} by the local model from this customer's last 25 emails.</p>`
+    :`<div class="panel"><p style="margin:0">No strategy card yet. The local model writes one from this customer's recent emails.</p></div>`}
+    <div class="actions"><button type="button" class="btn ${k?'':'primary'}" data-act="genCard" data-c="${cid}" ${busy?'disabled':''}>${busy?'Writing… this can take a minute':k?'Regenerate':'Generate strategy card'}</button>
+      ${calledToday(cid)?`<span class="called-mark">✓ Called ${calledToday(cid)}</span>`:`<button type="button" class="btn" data-act="call" data-c="${cid}">Mark as called</button>`}</div>`;
+}
+
+/* ---------- 3 brief ---------- */
+function vBrief(){
+  const withMail = ST.customers.filter(c=>ST.emails.some(e=>e.customer_id===c.id));
+  const cid = Number(UI.briefCid) || (withMail[0] && withMail[0].id) || 0;
+  const b = cid && ST.cards[cid] && ST.cards[cid].brief, c = custOf(cid), busy = UI.busy==='brief'+cid;
+  const panel = (t, a, empty) => `<div class="panel"><h3>${t}</h3>${listOrEmpty(a, empty)}</div>`;
+  return `<div class="view">
+    <div class="view-h"><div class="eyebrow">3 · Before meetings</div><h1>Pre-meeting brief</h1><p class="lede">Pick the customer you are meeting. The local model writes a one-page brief from your recent emails with them. Calendar access is not part of this version.</p></div>
+    ${withMail.length?`<form class="panel briefform" id="briefForm">
+      <label for="briefCust">Customer<select id="briefCust">${withMail.map(x=>`<option value="${x.id}" ${x.id===cid?'selected':''}>${esc(x.name)} (${x.tier})</option>`).join('')}</select></label>
+      <label for="briefTopic">Meeting topic <span class="note">(optional)</span><input id="briefTopic" value="${esc(UI.briefTopic)}" placeholder="e.g. quarterly review"></label>
+      <div class="actions"><button type="submit" class="btn primary" ${busy?'disabled':''}>${busy?'Writing… this can take a minute':b?'Regenerate brief':'Write brief'}</button></div></form>`
+      :'<div class="panel empty">No customer emails yet.</div>'}
+    ${b?`<div class="section-h"><h2>${esc(c.name)} ${tierBadge(c)}</h2><span class="sub">${b.topic?esc(b.topic)+' · ':''}written ${whenTxt(b.created)}</span></div>
+      <div class="grid2">${panel('Recent important emails',b.recent,'None.')}${panel('Open items',b.open_items,'None.')}${panel('Risks',b.risks,'No risk signals.')}${panel('Opportunities',b.opportunities,'None.')}</div>
+      <div class="grid2"><div class="panel"><h3>Suggested agenda</h3>${b.agenda&&b.agenda.length?`<ol class="list">${b.agenda.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:'<p class="empty">None.</p>'}</div>${panel('Questions to ask',b.questions,'None.')}</div>`:''}
+  </div>`;
+}
+
+/* ---------- 4 opportunities & drafts ---------- */
+function vPipeline(){
+  const drafts = ST.emails.filter(e=>['adopted','edited'].includes(e.status) && e.draft && !e.sent);
+  const waiting = ST.emails.filter(e=>e.draft && isOpen(e));
+  const opps = ST.opps.filter(o=>!o.decision || new Date(o.created)>=daysAgo(7));
+  return `<div class="view">
+    <div class="view-h"><div class="eyebrow">4 · Afternoon</div><h1>Opportunities & drafts</h1><p class="lede">Confirm the opportunities the model found in your emails. Finish drafts in Gmail and send them yourself; the app notices the sent reply at the next sync.</p></div>
+    <div class="section-h"><h2>Opportunities found in email</h2><span class="sub">${ST.opps.filter(o=>!o.decision).length} to confirm</span></div>
+    ${opps.length?`<div class="opps">${opps.map(o=>{const c=custOf(o.customer_id);return `<div class="opp ${o.decision?'decided':''}">
+      <div class="row-wrap"><b>${esc(c?c.short:'Unassigned customer')}</b>${tierBadge(c)}<span class="tag opp">${esc(o.title)}</span></div>
+      <div>${esc(o.summary)}</div><div class="src">Source: ${esc(o.src_subject||'')} · ${o.src_received?whenTxt(o.src_received):''}</div>
+      ${o.next?`<div class="nx"><b>Suggested next step</b> · ${esc(o.next)}</div>`:''}
+      <div class="actions">${o.decision?`<span class="res ${o.decision==='add'?'good':'mute'}">${o.decision==='add'?'✓ Added to pipeline':'Ignored'}</span><button type="button" class="btn ghost sm" data-act="oppUndo" data-o="${o.id}">Undo</button>`
+        :`<button type="button" class="btn primary sm" data-act="oppAdd" data-o="${o.id}">Add to pipeline</button><button type="button" class="btn sm" data-act="oppIgnore" data-o="${o.id}">Ignore</button>`}</div></div>`;}).join('')}</div>`
+      :'<div class="panel empty">No new opportunities.</div>'}
+    <div class="section-h"><h2>Adopted drafts not yet sent</h2><span class="sub">${ST.modes.gmail_changes?'In your Gmail drafts':'Kept in the app (Gmail changes are off)'}</span></div>
+    <div class="drafts">${drafts.length?drafts.map(e=>`<div class="dr"><div>${catChip(e.category)} <b>${esc(custName(e))}</b> · ${esc(e.subject)}
+        <div class="s">${e.status==='edited'?'Edited & adopted':'Adopted'} · ${esc(e.lang)}${e.draft_saved?' · in Gmail drafts':''}${hasPh(draftOf(e))?' · <span class="phwarn">still has fields to fill in</span>':''}</div></div>
+        <span class="res mute">Waiting to be sent</span></div>`).join('')
+      :'<div class="dr"><span class="empty">No adopted drafts waiting.</span></div>'}
+      ${waiting.length?`<div class="dr"><span class="s">${plural(waiting.length,'draft')} still waiting in the review queue.</span><button type="button" class="btn sm" data-go="queue">Go to review queue</button></div>`:''}</div>
+    <div class="section-h"><h2>Pipeline</h2><span class="sub">Kept in the app</span></div>
+    <div class="board">${STAGES.map(st=>{const cards=ST.pipeline.filter(p=>p.stage===st);return `<div class="col"><div class="col-h"><span>${st}</span><span class="mono">${cards.length}</span></div>
+      ${cards.map(p=>{const c=custOf(p.customer_id);return `<div class="card"><span class="c">${esc(c?c.short:'Unassigned')}</span><span>${esc(p.title)}</span>
+        <select data-act="stage" data-p="${p.id}" aria-label="Stage">${STAGES.map(x=>`<option ${x===p.stage?'selected':''}>${x}</option>`).join('')}</select></div>`;}).join('')}</div>`;}).join('')}</div>
+  </div>`;
+}
+
+/* ---------- 5 end of day ---------- */
+function tomorrowItems(){
+  const out = [];
+  ST.emails.filter(e=>isImp(e) && !e.sent && e.status!=='noaction').forEach(e=>{
+    const c = custName(e);
+    out.push(e.category===C_INC?['Morning',`${c}: give the next update on the incident`]:e.category===C_CMP?['Morning',`${c}: follow up on the complaint`]:['As promised',`${c}: send the quotation`]);
+  });
+  ST.customers.filter(riskUp).filter(c=>!calledToday(c.id)).forEach(c=>out.push(['Morning',`Call ${c.short} (at-risk customer, not contacted today)`]));
+  ST.pipeline.filter(p=>p.stage==='New').forEach(p=>{ const c=custOf(p.customer_id); out.push(['Afternoon',`${c?c.short:'Customer'}: first follow-up on “${p.title}”`]); });
+  return out.slice(0,20);
+}
+function vEvening(){
+  const t = dkey(new Date()), today = e => dkey(new Date(e.processed))===t;
+  const todays = ST.emails.filter(today), logs = ST.log.filter(l=>dkey(new Date(l.ts))===t);
+  const done = ST.emails.filter(e=>!isOpen(e) && today(e)).length;
+  const adopted = ST.emails.filter(e=>e.status==='adopted' && today(e)).length, edited = ST.emails.filter(e=>e.status==='edited' && today(e)).length;
+  const calls = ST.calls.filter(c=>dkey(new Date(c.ts))===t).length;
+  const oppAdded = logs.filter(l=>l.text.startsWith('Added to pipeline')).length;
+  const openImp = ST.emails.filter(e=>isImp(e) && !e.sent && e.status!=='noaction'), openOther = ST.emails.filter(e=>!isImp(e) && isOpen(e));
+  const tmr = tomorrowItems(), saved = ST.reminders_tomorrow.length;
+  const tiles = [['Emails processed today',todays.length],['Handled',done],['Drafts adopted',adopted],['Edited & adopted',edited],['Opportunities added',oppAdded],['Follow-up calls',calls]];
+  return `<div class="view">
+    <div class="view-h"><div class="eyebrow">5 · End of day</div><h1>Daily summary and tomorrow's reminders</h1><p class="lede">What you did today, what is still open, and the reminders for tomorrow. Saved reminders appear at the top of tomorrow's review queue.</p></div>
+    <div class="summary-tiles">${tiles.map(x=>`<div class="kpi"><div class="l">${x[0]}</div><div class="v">${x[1]}</div></div>`).join('')}</div>
+    <div class="grid2">
+      <div class="panel"><h3>Still open · ${openImp.length+openOther.length}</h3>${openImp.length+openOther.length?`<ul class="list">
+        ${openImp.map(e=>`<li>${catChip(e.category)} <b>${esc(custName(e))}</b> · ${impState(e)}</li>`).join('')}
+        ${openOther.slice(0,15).map(e=>`<li>${catChip(e.category)} <b>${esc(custName(e))}</b> · ${ST_P}</li>`).join('')}</ul>`:'<p class="empty">Everything is closed.</p>'}</div>
+      <div class="panel"><h3>Reminders for tomorrow</h3>${tmr.length?`<ul class="list">${tmr.map(r=>`<li><span class="when">${esc(r[0])}</span>${esc(r[1])}</li>`).join('')}</ul>`:'<p class="empty">Nothing to remind.</p>'}
+        <div class="actions" style="margin-top:12px"><button type="button" class="btn primary" data-act="tomorrow" ${tmr.length?'':'disabled'}>${saved?'Save again':'Save for tomorrow'}</button>${saved?`<span class="res good">✓ ${plural(saved,'reminder')} saved</span>`:''}</div></div>
+    </div>
+    <div class="panel"><h3>Today's activity log</h3>${logs.length?`<div class="timeline">${logs.map(l=>`<div><span class="when">${hm(l.ts)}</span><span>${esc(l.text)}</span></div>`).join('')}</div>`:'<p class="empty">No activity today yet.</p>'}</div>
+  </div>`;
+}
+
+/* ---------- dashboard ---------- */
+function lateItems(){
+  const out = [];
+  ST.emails.filter(e=>isImp(e) && !e.sent && e.status!=='noaction').forEach(e=>{
+    const d = deadline(e), left = (d.at-Date.now())/6e4;
+    if (left < 180) out.push({late:left<0, e, txt:isOpen(e)?ST_P:'Reply not sent yet', due:left<0?'Overdue':`By ${hm(d.at)}`});
+  });
+  ST.emails.filter(e=>isOpen(e) && !isImp(e) && e.needs_reply && Date.now()-new Date(e.received)>864e5).forEach(e=>out.push({late:true,e,txt:'Unanswered for over a day',due:'Overdue'}));
+  return out.sort((a,b)=>b.late-a.late);
+}
+function vDashboard(){
+  const pend = ST.emails.filter(e=>isOpen(e) && e.category!==C_INT), byCat = c => pend.filter(e=>e.category===c).length;
+  const late = lateItems(), risks = ST.customers.filter(c=>signals(c.id).risk.length);
+  const items = ST.emails.filter(isImp), states=[ST_P,ST_A,ST_W,ST_C], cls=['seg-p','seg-a','seg-w','seg-c'];
+  const maxCol = Math.max(1,...STAGES.map(x=>ST.pipeline.filter(p=>p.stage===x).length));
+  const active = ST.customers.filter(c=>custEmails(c.id,7).length);
+  return `<div class="view">
+    <div class="view-h"><div class="eyebrow">Overview · live</div><h1>Dashboard</h1><p class="lede">Refreshes every 30 seconds while this page is open. Important items cover the last 35 days.</p></div>
+    <div class="kpis">
+      <div class="kpi hl"><div class="l">Pending</div><div class="v">${pend.length}</div><div class="d">Incidents ${byCat(C_INC)} · complaints ${byCat(C_CMP)} · quotations ${byCat(C_QUO)} · other ${pend.length-byCat(C_INC)-byCat(C_CMP)-byCat(C_QUO)}</div></div>
+      <div class="kpi crit"><div class="l">Overdue or due soon</div><div class="v">${late.length}</div><div class="d">Overdue ${late.filter(l=>l.late).length}</div></div>
+      <div class="kpi crit"><div class="l">At-risk customers</div><div class="v">${risks.length}</div><div class="d">Tier A ${risks.filter(c=>c.tier==='A').length}</div></div>
+      <div class="kpi good"><div class="l">Opportunities to confirm</div><div class="v">${ST.opps.filter(o=>!o.decision).length}</div><div class="d">Open in pipeline ${ST.pipeline.filter(p=>!['Won','Lost'].includes(p.stage)).length}</div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3>Overdue and due soon</h3>${late.length?`<div class="late-list">${late.map(l=>`<div class="late-item ${l.late?'is-late':''}"><span class="cat ${CAT_CLS[l.e.category]}">${esc(shortCat(l.e.category))}</span>
+        <span><b>${esc(custName(l.e))}</b> ${tierBadge(custOf(l.e.customer_id))} · ${l.txt}</span><span class="due mono ${l.late?'late':'soon'}">${l.due}</span></div>`).join('')}</div>`:'<p class="empty">Nothing overdue.</p>'}</div>
+      <div class="panel"><h3>At-risk customers</h3>${risks.length?`<div class="late-list">${risks.sort((a,b)=>a.tier.localeCompare(b.tier)).map(c=>`<div class="late-item ${riskUp(c)?'is-late':''}">${tierBadge(c)}
+        <span><b>${esc(c.short)}</b><br><span class="note">${esc(signals(c.id).risk.join(' · '))}</span></span><button type="button" class="btn sm" data-act="card" data-c="${c.id}">Strategy card</button></div>`).join('')}</div>`:'<p class="empty">No risk signals in the last 14 days.</p>'}</div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3>Important item status</h3><div class="bars">${[C_INC,C_CMP,C_QUO].map(c=>{const its=items.filter(i=>i.category===c), n=its.length;
+          return `<div class="bar-row"><span>${shortCat(c)}</span><div class="bar">${states.map((s,k)=>{const m=its.filter(i=>impState(i)===s).length;return m?`<span class="${cls[k]}" style="width:${m/n*100}%" title="${s} ${m}"></span>`:'';}).join('')}</div><span class="mono">${n}</span></div>`;}).join('')}
+        <div class="legend">${states.map((s,k)=>`<span><i class="${cls[k]}"></i>${s} ${items.filter(i=>impState(i)===s).length}</span>`).join('')}</div></div></div>
+      <div class="panel"><h3>Opportunity pipeline</h3><div class="bars">${STAGES.map(st=>{const m=ST.pipeline.filter(p=>p.stage===st).length;return `<div class="bar-row"><span>${st}</span><div class="bar"><span class="${st==='Won'?'seg-c':st==='Lost'?'seg-l':'seg-a'}" style="width:${m/maxCol*100}%"></span></div><span class="mono">${m}</span></div>`;}).join('')}</div></div>
+    </div>
+    <div><div class="section-h" style="margin-bottom:10px"><h2>Customer emails and tone</h2><span class="sub">Last 7 days, compared with the 7 days before</span></div>
+    ${active.length?`<div class="tbl-wrap"><table><thead><tr><th>Customer</th><th>Tier</th><th class="num">Emails</th><th>Tone trend</th><th>Flags</th></tr></thead><tbody>
+      ${active.map(c=>{const s=signals(c.id), t=tone(c.id);return `<tr><td>${esc(c.short)}</td><td>${tierBadge(c)}</td><td class="num">${custEmails(c.id,7).length}</td>
+        <td class="trend-${t}">${TONE_TXT[t]}</td><td>${s.risk.length?'<span class="tag risk">Risk</span> ':''}${s.opp.length?'<span class="tag opp">Opportunity</span> ':''}${s.overdue?'<span class="tag risk">Overdue</span>':''}</td></tr>`;}).join('')}
+    </tbody></table></div>`:'<div class="panel empty">No customer emails in the last 7 days.</div>'}</div>
+  </div>`;
+}
+
+/* ---------- report ---------- */
+function vReport(){
+  const days = []; for (let i=1;i<=14;i++){ const d=new Date(); d.setDate(d.getDate()-i); days.push(dkey(d)); }
+  const today = new Date(); const tk = dkey(today); days.unshift(tk);
+  const day = UI.reportDay || days[1];
+  const es = ST.emails.filter(e=>dkey(new Date(e.received))===day && e.category!==C_INT);
+  const handled = es.filter(e=>!isOpen(e)).length;
+  const nc = c => es.filter(e=>e.category===c).length, cc = c => es.filter(e=>e.category===c && (e.sent || e.status==='noaction')).length;
+  const overdue = es.filter(e=>isImp(e) && !e.sent && e.status!=='noaction' && deadline(e).at < Date.now());
+  const byCust = {}; es.forEach(e=>{ if(!e.customer_id) return; const b=byCust[e.customer_id]=byCust[e.customer_id]||{risk:[],opp:[]}; b.risk.push(...e.risk); b.opp.push(...e.opp); });
+  const riskC = Object.entries(byCust).filter(([,v])=>v.risk.length), oppC = Object.entries(byCust).filter(([,v])=>v.opp.length);
+  const label = d => d===tk ? 'Today' : new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  return `<div class="view">
+    <div class="view-h"><div class="eyebrow">Overview · any day</div><h1>Daily report</h1>
+      <label class="report-day" for="reportDay">Emails received on <select id="reportDay">${days.map(d=>`<option value="${d}" ${d===day?'selected':''}>${label(d)}</option>`).join('')}</select></label></div>
+    <div class="kpis three">
+      <div class="kpi"><div class="l">Received / handled / pending</div><div class="v">${es.length} / ${handled} / ${es.length-handled}</div><div class="d">Internal emails not counted</div></div>
+      <div class="kpi crit"><div class="l">Important items overdue</div><div class="v">${overdue.length}</div><div class="d">${overdue.length?esc(uniq(overdue.map(custName)).join(', ')):'None'}</div></div>
+      <div class="kpi"><div class="l">New / closed</div><div class="v" style="font-size:16px;line-height:1.7">Quotations ${nc(C_QUO)} / ${cc(C_QUO)}<br>Complaints ${nc(C_CMP)} / ${cc(C_CMP)} · Incidents ${nc(C_INC)} / ${cc(C_INC)}</div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3>At-risk customers</h3>${riskC.length?`<ul class="list">${riskC.map(([id,v])=>{const c=custOf(Number(id));return `<li><b>${esc(c.short)}</b> ${tierBadge(c)} · ${esc(uniq(v.risk).join('; '))}<div class="note">Suggested: ${esc(action(c))}</div></li>`;}).join('')}</ul>`:'<p class="empty">No risk signals that day.</p>'}</div>
+      <div class="panel"><h3>Opportunity customers</h3>${oppC.length?`<ul class="list">${oppC.map(([id,v])=>{const c=custOf(Number(id));return `<li><b>${esc(c.short)}</b> ${tierBadge(c)} · ${esc(uniq(v.opp).join('; '))}</li>`;}).join('')}</ul>`:'<p class="empty">No opportunity signals that day.</p>'}</div>
+    </div>
+  </div>`;
+}
+
+/* ---------- settings ---------- */
+function vSettings(){
+  const m = ST.modes;
+  return `<div class="view">
+    <div class="view-h"><div class="eyebrow">Settings</div><h1>Settings</h1><p class="lede">Settings live in config.json in the app folder. Change them there, then restart the app.</p></div>
+    <div class="tbl-wrap"><table><tbody>
+      <tr><th>Mailbox</th><td>${esc(ST.mailbox)}</td></tr>
+      <tr><th>Local model</th><td class="mono">${esc(ST.model)}</td></tr>
+      <tr><th>Daily sync</th><td>${esc(ST.daily_sync_time)} Central European Time, plus any sync you set</td></tr>
+      <tr><th>Labels and read status in Gmail</th><td>${m.gmail_changes?'On – emails are filed into '+esc(ST.label_prefix)+'/… labels and flagged emails are marked read':'Off (shadow mode) – Gmail is not changed'} <span class="note">(gmail_changes)</span></td></tr>
+      <tr><th>Reply drafts</th><td>${m.drafts?'On':'Off'} <span class="note">(generate_drafts)</span></td></tr>
+    </tbody></table></div>
+    <div class="section-h"><h2>Customers · ${ST.customers.length}</h2><button type="button" class="btn" data-act="reloadCustomers">Reload customers.csv</button></div>
+    ${ST.customers.length?`<div class="tbl-wrap"><table><thead><tr><th>Customer</th><th>Tier</th><th>Email domains</th><th>Contacts</th></tr></thead><tbody>
+      ${ST.customers.map(c=>`<tr><td>${esc(c.name)}</td><td>${tierBadge(c)}</td><td class="mono">${esc(c.domains.join(', '))}</td><td>${esc(c.contacts||'')}</td></tr>`).join('')}</tbody></table></div>`
+      :'<div class="panel empty">No customers loaded. Fill in customers.csv in the app folder, then press “Reload customers.csv”.</div>'}
+  </div>`;
+}
+
+/* ---------- render & routing ---------- */
+const RENDER = {queue:vQueue,top10:vTop10,brief:vBrief,pipeline:vPipeline,evening:vEvening,dashboard:vDashboard,report:vReport,settings:vSettings};
+function render(){
+  if (!ST) return;
+  renderTop(); renderRail();
+  $('#main').innerHTML = RENDER[UI.view]();
+  if (UI.drawer) $('#drawerPanel').innerHTML = cardHTML(UI.drawer);
+}
+function go(v){ if(!RENDER[v]) v='queue'; UI.view=v; try{ if(location.hash!=='#'+v) history.replaceState(null,'','#'+v); }catch(_){} render(); window.scrollTo({top:0}); }
+function openCard(cid){ UI.drawer=cid; $('#drawerPanel').innerHTML=cardHTML(cid); $('#drawer').hidden=false; const b=$('#drawerPanel [data-act="close"]'); b&&b.focus(); }
+function closeCard(){ $('#drawer').hidden=true; UI.drawer=null; }
+
+document.addEventListener('click', async ev=>{
+  const g = ev.target.closest('[data-go]'); if (g){ go(g.dataset.go); return; }
+  const b = ev.target.closest('[data-act]'); if (!b || b.tagName==='SELECT') return;
+  const a = b.dataset.act, id = b.dataset.id ? Number(b.dataset.id) : null, cid = b.dataset.c ? Number(b.dataset.c) : null;
+  switch(a){
+    case 'confirm': { const v=$(`#lf-${id}-${b.dataset.i}`).value; await act({act:'confirm', id, i:Number(b.dataset.i), value:v}); return; }
+    case 'adopt': await act({act:'adopt', id}); return;
+    case 'edit': UI.editing=id; UI.rejecting=null; render(); { const t=$(`#ta-${id}`); t&&t.focus(); } return;
+    case 'saveEdit': { const t=$(`#ta-${id}`).value; UI.editing=null; await act({act:'saveEdit', id, text:t}); return; }
+    case 'cancelEdit': UI.editing=null; render(); return;
+    case 'reject': UI.rejecting=id; UI.editing=null; render(); return;
+    case 'rejectWhy': UI.rejecting=null; await act({act:'reject', id, reason:b.dataset.r}); return;
+    case 'cancelReject': UI.rejecting=null; render(); return;
+    case 'noaction': await act({act:'noaction', id}); return;
+    case 'undo': await act({act:'undo', id}); return;
+    case 'batch': await act({act:'batch'}); return;
+    case 'expand': UI.expanded[id]=!UI.expanded[id]; render(); return;
+    case 'orig': UI.orig[id]={loading:true}; render();
+      try { const j = await api('/api/original?id='+id); UI.orig[id]={text:j.text}; } catch(e){ UI.orig[id]={error:e.message}; }
+      render(); return;
+    case 'origHide': delete UI.orig[id]; render(); return;
+    case 'card': openCard(cid); return;
+    case 'genCard': await act({act:'card', cid}); return;
+    case 'close': closeCard(); return;
+    case 'call': await act({act:'call', cid}); return;
+    case 'pin': await act({act:'pin', cid}); return;
+    case 'down': await act({act:'down', cid}); return;
+    case 'oppAdd': await act({act:'oppAdd', oid:Number(b.dataset.o)}); return;
+    case 'oppIgnore': await act({act:'oppIgnore', oid:Number(b.dataset.o)}); return;
+    case 'oppUndo': await act({act:'oppUndo', oid:Number(b.dataset.o)}); return;
+    case 'tomorrow': await act({act:'tomorrow', items:tomorrowItems()}); return;
+    case 'reloadCustomers': await act({act:'reloadCustomers'}); return;
+    case 'syncOpen': UI.syncOpen=!UI.syncOpen; renderTop(); if(UI.syncOpen){ const t=$('#syncTime'); t&&t.focus(); } return;
+    case 'syncClose': UI.syncOpen=false; renderTop(); return;
+    case 'syncQuick': { const ok = await act({act:'setNextSync', when:b.dataset.m==='now'?'now':Number(b.dataset.m)}); if (ok){ UI.syncOpen=false; renderTop(); setTimeout(poll, 1500); } return; }
+  }
+});
+document.addEventListener('change', async ev=>{
+  const s = ev.target;
+  if (s.matches('select[data-act="stage"]')) { await act({act:'stage', pid:Number(s.dataset.p), stage:s.value}); return; }
+  if (s.matches('select[data-act="assign"]') && s.value) { await act({act:'assign', id:Number(s.dataset.id), customer_id:Number(s.value)}); return; }
+  if (s.id==='reportDay') { UI.reportDay=s.value; render(); return; }
+  if (s.id==='briefCust') { UI.briefCid=s.value; render(); return; }
+});
+document.addEventListener('submit', async ev=>{
+  ev.preventDefault();
+  if (ev.target.id==='syncForm'){ const v=$('#syncTime').value; const ok = await act({act:'setNextSync', when:v}); if (ok){ UI.syncOpen=false; renderTop(); } return; }
+  if (ev.target.id==='briefForm'){ UI.briefCid=$('#briefCust').value; UI.briefTopic=$('#briefTopic').value; await act({act:'brief', cid:Number(UI.briefCid), topic:UI.briefTopic}); return; }
+});
+document.addEventListener('keydown', ev=>{ if(ev.key!=='Escape') return; if(UI.syncOpen){ UI.syncOpen=false; renderTop(); return; } if(!$('#drawer').hidden) closeCard(); });
+window.addEventListener('hashchange', ()=>{ const v=location.hash.slice(1); if(v!==UI.view && RENDER[v]) go(v); });
+function setTopbarH(){ document.documentElement.style.setProperty('--topbar-h', $('#topbar').offsetHeight+'px'); }
+window.addEventListener('resize', setTopbarH);
+UI.view = RENDER[location.hash.slice(1)] ? location.hash.slice(1) : 'queue';
+(async ()=>{ await poll(); setTopbarH(); })();
+</script>
+
+</body>
+</html>
